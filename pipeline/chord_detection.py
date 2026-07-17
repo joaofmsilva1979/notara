@@ -1,0 +1,107 @@
+"""Step 4: chord detection via beat-synchronous chroma + template matching.
+
+We beat-track the harmonic mix, group beats into bars (assuming a constant
+4/4 meter -- see limitation below), average the chromagram within each bar,
+and match that averaged chroma vector against a bank of chord templates
+(major, minor, dominant 7, major 7, minor 7 for all 12 roots) using cosine
+similarity. This is the same family of technique as the classic
+Fujishima/chroma-template chord recognizers; it is not a learned model.
+
+Known limitations:
+- Only 5 chord qualities x 12 roots (60 templates) are covered. sus2/sus4,
+  add9, 6th chords, altered dominants, and inversions are NOT modeled and
+  will be misclassified as the closest template (usually plain maj/min).
+- Meter is assumed to be constant 4/4 (bars = groups of 4 tracked beats).
+  Tempo/time-signature changes, pickup bars, or inaccurate beat tracking
+  will shift bar boundaries and misalign chords with the tab.
+- One chord label per bar is a simplification; genuine chord changes within
+  a bar (e.g. two chords per bar) are collapsed into a single "best fit".
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import List
+
+import librosa
+import numpy as np
+
+NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+
+# (suffix, semitone intervals from root)
+CHORD_TYPES = [
+    ("", [0, 4, 7]),        # major
+    ("m", [0, 3, 7]),       # minor
+    ("7", [0, 4, 7, 10]),   # dominant 7th
+    ("maj7", [0, 4, 7, 11]),  # major 7th
+    ("m7", [0, 3, 7, 10]),  # minor 7th
+]
+
+BEATS_PER_BAR = 4  # assumes 4/4 time (see module docstring)
+
+
+@dataclass
+class ChordSegment:
+    bar_index: int
+    start: float
+    end: float
+    label: str
+
+
+def _build_templates() -> List[tuple]:
+    templates = []
+    for root in range(12):
+        for suffix, intervals in CHORD_TYPES:
+            vec = np.zeros(12)
+            for i, interval in enumerate(intervals):
+                # root and fifth weighted slightly higher than 3rd/7th
+                weight = 1.0 if i in (0, len(intervals) - 1) else 0.8
+                vec[(root + interval) % 12] = weight
+            label = f"{NOTE_NAMES[root]}{suffix}"
+            templates.append((label, vec / np.linalg.norm(vec)))
+    return templates
+
+
+_TEMPLATES = _build_templates()
+
+
+def _best_chord(chroma_vec: np.ndarray) -> str:
+    norm = np.linalg.norm(chroma_vec)
+    if norm == 0:
+        return "N.C."  # no chord / silence
+    normalized = chroma_vec / norm
+    best_label, best_score = "N.C.", -1.0
+    for label, template in _TEMPLATES:
+        score = float(np.dot(normalized, template))
+        if score > best_score:
+            best_label, best_score = label, score
+    return best_label
+
+
+def detect_chords(y: np.ndarray, sr: int) -> List[ChordSegment]:
+    tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr, units="frames")
+    beat_times = librosa.frames_to_time(beat_frames, sr=sr)
+
+    if len(beat_times) < BEATS_PER_BAR:
+        duration = librosa.get_duration(y=y, sr=sr)
+        beat_times = np.linspace(0, duration, num=max(2, int(duration)))
+
+    chroma = librosa.feature.chroma_cqt(y=y, sr=sr)
+    chroma_times = librosa.frames_to_time(np.arange(chroma.shape[1]), sr=sr)
+
+    bar_starts = beat_times[::BEATS_PER_BAR]
+    duration = librosa.get_duration(y=y, sr=sr)
+    bar_bounds = list(bar_starts) + [duration]
+
+    segments: List[ChordSegment] = []
+    for i in range(len(bar_bounds) - 1):
+        start, end = bar_bounds[i], bar_bounds[i + 1]
+        if end <= start:
+            continue
+        mask = (chroma_times >= start) & (chroma_times < end)
+        if not np.any(mask):
+            continue
+        bar_chroma = chroma[:, mask].mean(axis=1)
+        label = _best_chord(bar_chroma)
+        segments.append(ChordSegment(bar_index=i, start=start, end=end, label=label))
+
+    return segments

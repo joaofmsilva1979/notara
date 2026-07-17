@@ -1,0 +1,451 @@
+scikit-learn version 1.6.1 is not supported. Minimum required version: 0.17. Maximum required version: 1.5.1. Disabling scikit-learn conversion API.
+Torch version 2.8.0 has not been tested with coremltools. You may run into unexpected errors. Torch 2.7.0 is the most recent version that has been tested.
+WARNING:root:tflite-runtime is not installed. If you plan to use a TFLite Model, reinstall basic-pitch with `pip install 'basic-pitch tflite-runtime'` or `pip install 'basic-pitch[tf]'
+WARNING:root:onnxruntime is not installed. If you plan to use an ONNX Model, reinstall basic-pitch with `pip install 'basic-pitch[onnx]'`
+WARNING:root:Tensorflow is not installed. If you plan to use a TF Saved Model, reinstall basic-pitch with `pip install 'basic-pitch[tf]'`
+Downloading: "https://dl.fbaipublicfiles.com/demucs/hybrid_transformer/5c90dfd2-34c22ccb.th" to /Users/joao.silva/.cache/torch/hub/checkpoints/5c90dfd2-34c22ccb.th
+  0%|          | 0.00/52.4M [00:00<?, ?B/s]  8%|▊         | 4.00M/52.4M [00:00<00:01, 41.7MB/s] 25%|██▍       | 13.0M/52.4M [00:00<00:00, 72.5MB/s] 44%|████▎     | 22.9M/52.4M [00:00<00:00, 86.5MB/s] 60%|█████▉    | 31.2M/52.4M [00:00<00:00, 63.9MB/s] 82%|████████▏ | 42.9M/52.4M [00:00<00:00, 78.7MB/s]100%|██████████| 52.4M/52.4M [00:00<00:00, 78.8MB/s]
+Selected model is a bag of 1 models. You will see that many progress bars per track.
+Separated tracks will be stored in /Users/joao.silva/Library/CloudStorage/GoogleDrive-davisthe8th@gmail.com/My Drive/GARAGEBAND/VALLETOFNOONE/Song_whatever/.GOOD Weightless Days_pipeline_tmp/stems/htdemucs_6s
+Separating track /Users/joao.silva/Library/CloudStorage/GoogleDrive-davisthe8th@gmail.com/My Drive/GARAGEBAND/VALLETOFNOONE/Song_whatever/GOOD Weightless Days.wav
+  0%|                                                                                  | 0.0/234.0 [00:00<?, ?seconds/s]  2%|█▊                                                                       | 5.85/234.0 [00:02<01:30,  2.52seconds/s]  5%|███▋                                                                     | 11.7/234.0 [00:04<01:27,  2.55seconds/s]  7%|████▍                                                      | 17.549999999999997/234.0 [00:06<01:25,  2.52seconds/s] 10%|███████▎                                                                 | 23.4/234.0 [00:09<01:20,  2.60seconds/s] 12%|█████████                                                               | 29.25/234.0 [00:11<01:17,  2.63seconds/s] 15%|████████▊                                                  | 35.099999999999994/234.0 [00:13<01:15,  2.64seconds/s] 18%|██████████▎                                                | 40.949999999999996/234.0 [00:15<01:13,  2.63seconds/s] 20%|██████████████▌                                                          | 46.8/234.0 [00:17<01:10,  2.66seconds/s] 22%|████████████████▏                                                       | 52.65/234.0 [00:20<01:09,  2.60seconds/s] 25%|██████████████████▎                                                      | 58.5/234.0 [00:22<01:08,  2.55seconds/s] 27%|███████████████████▊                                                    | 64.35/234.0 [00:24<01:05,  2.58seconds/s] 30%|█████████████████▉                                          | 70.19999999999999/234.0 [00:26<01:02,  2.62seconds/s] 32%|███████████████████████▍                                                | 76.05/234.0 [00:29<01:00,  2.63seconds/s] 35%|█████████████████████                                       | 81.89999999999999/234.0 [00:31<00:57,  2.66seconds/s] 38%|███████████████████████████                                             | 87.75/234.0 [00:33<00:54,  2.67seconds/s] 40%|█████████████████████████████▏                                           | 93.6/234.0 [00:36<00:55,  2.55seconds/s] 42%|█████████████████████████▍                                  | 99.44999999999999/234.0 [00:38<00:52,  2.58seconds/s] 45%|████████████████████████████████▍                                       | 105.3/234.0 [00:40<00:49,  2.62seconds/s] 48%|████████████████████████████                               | 111.14999999999999/234.0 [00:42<00:46,  2.65seconds/s] 50%|████████████████████████████████████                                    | 117.0/234.0 [00:44<00:44,  2.65seconds/s] 52%|█████████████████████████████████████▎                                 | 122.85/234.0 [00:46<00:41,  2.68seconds/s] 55%|███████████████████████████████████████▌                                | 128.7/234.0 [00:49<00:39,  2.67seconds/s] 57%|█████████████████████████████████▉                         | 134.54999999999998/234.0 [00:51<00:38,  2.58seconds/s] 60%|███████████████████████████████████▍                       | 140.39999999999998/234.0 [00:53<00:36,  2.57seconds/s] 62%|████████████████████████████████████████████▍                          | 146.25/234.0 [00:56<00:33,  2.58seconds/s] 65%|██████████████████████████████████████████████▊                         | 152.1/234.0 [00:58<00:31,  2.61seconds/s] 68%|███████████████████████████████████████████████▉                       | 157.95/234.0 [01:00<00:29,  2.62seconds/s] 70%|█████████████████████████████████████████▎                 | 163.79999999999998/234.0 [01:02<00:26,  2.66seconds/s] 72%|██████████████████████████████████████████▊                | 169.64999999999998/234.0 [01:04<00:24,  2.63seconds/s] 75%|██████████████████████████████████████████████████████                  | 175.5/234.0 [01:07<00:22,  2.60seconds/s] 78%|███████████████████████████████████████████████████████                | 181.35/234.0 [01:09<00:20,  2.62seconds/s] 80%|█████████████████████████████████████████████████████████▌              | 187.2/234.0 [01:11<00:17,  2.64seconds/s] 82%|████████████████████████████████████████████████▋          | 193.04999999999998/234.0 [01:13<00:15,  2.64seconds/s] 85%|██████████████████████████████████████████████████▏        | 198.89999999999998/234.0 [01:15<00:13,  2.67seconds/s] 88%|██████████████████████████████████████████████████████████████▏        | 204.75/234.0 [01:18<00:10,  2.69seconds/s] 90%|████████████████████████████████████████████████████████████████▊       | 210.6/234.0 [01:20<00:08,  2.64seconds/s] 92%|█████████████████████████████████████████████████████████████████▋     | 216.45/234.0 [01:22<00:06,  2.61seconds/s] 95%|████████████████████████████████████████████████████████   | 222.29999999999998/234.0 [01:24<00:04,  2.65seconds/s] 97%|█████████████████████████████████████████████████████████▌ | 228.14999999999998/234.0 [01:26<00:02,  2.65seconds/s]100%|████████████████████████████████████████████████████████████████████████| 234.0/234.0 [01:29<00:00,  2.68seconds/s]100%|████████████████████████████████████████████████████████████████████████| 234.0/234.0 [01:29<00:00,  2.63seconds/s]
+/Users/joao.silva/Library/CloudStorage/GoogleDrive-davisthe8th@gmail.com/My Drive/GARAGEBAND/VALLETOFNOONE/Weightless_days_thedarkversion/guitar_tab_pipeline/.venv/lib/python3.9/site-packages/torchaudio/_backend/utils.py:337: UserWarning: In 2.9, this function's implementation will be changed to use torchaudio.save_with_torchcodec` under the hood. Some parameters like format, encoding, bits_per_sample, buffer_size, and ``backend`` will be ignored. We recommend that you port your code to rely directly on TorchCodec's encoder instead: https://docs.pytorch.org/torchcodec/stable/generated/torchcodec.encoders.AudioEncoder
+  warnings.warn(
+[1/6] Separating sources with Demucs (htdemucs_6s)...
+[2/6] Transcribing notes with basic-pitch...
+Predicting MIDI for /Users/joao.silva/Library/CloudStorage/GoogleDrive-davisthe8th@gmail.com/My Drive/GARAGEBAND/VALLETOFNOONE/Song_whatever/.GOOD Weightless Days_pipeline_tmp/harmonic_mix.wav...
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+isfinite: True
+shape: (1, 43844, 1)
+dtype: float32
+/Users/joao.silva/Library/CloudStorage/GoogleDrive-davisthe8th@gmail.com/My Drive/GARAGEBAND/VALLETOFNOONE/Weightless_days_thedarkversion/guitar_tab_pipeline/main.py:74: DeprecationWarning: Conversion of an array with ndim > 0 to a scalar is deprecated, and will error in future. Ensure you extract a single element from your array before performing this operation. (Deprecated NumPy 1.25.)
+  tempo = float(tempo)
+       -> 2950 notes detected
+[3/6] Loading harmonic mix for key/chord analysis...
+[4/6] Detecting key (chroma + Krumhansl-Schmuckler)...
+       -> A minor (correlation=0.84)
+[5/6] Detecting chords (beat-synchronous chroma templates)...
+       -> 125 bars, tempo ~161.5 BPM
+[6/6] Mapping notes to fretboard and rendering tab...
+MIDI export: /Users/joao.silva/Library/CloudStorage/GoogleDrive-davisthe8th@gmail.com/My Drive/GARAGEBAND/VALLETOFNOONE/Song_whatever/GOOD Weightless Days_tab.mid
+
+Done. Tab written to: /Users/joao.silva/Library/CloudStorage/GoogleDrive-davisthe8th@gmail.com/My Drive/GARAGEBAND/VALLETOFNOONE/Song_whatever/GOOD Weightless Days_tab.txt
