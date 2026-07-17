@@ -13,6 +13,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List
 
+from .transcription import Note
+
 MAX_FRET = 15
 
 STANDARD_E_A_D_G_B_E = "Standard EADGBE"
@@ -47,3 +49,20 @@ def find_tuning(name: str) -> Tuning:
         if tuning.name == name:
             return tuning
     raise ValueError(f"Unknown tuning: {name!r}")
+
+
+def _fits(pitch: int, tuning: Tuning) -> bool:
+    return any(0 <= pitch - open_midi <= MAX_FRET for open_midi in tuning.open_string_midi)
+
+
+def fit_score(notes: List[Note], tuning: Tuning) -> float:
+    """Fraction of `notes` that CAN be fretted on `tuning` within [0, MAX_FRET].
+
+    Notes below every string's open pitch (i.e. would need a negative fret)
+    are the strongest signal of a mismatched tuning -- e.g. a recurring low
+    D under an assumed Standard tuning, where no string can produce it.
+    """
+    if not notes:
+        return 1.0
+    fitting = sum(1 for note in notes if _fits(note.pitch, tuning))
+    return fitting / len(notes)
