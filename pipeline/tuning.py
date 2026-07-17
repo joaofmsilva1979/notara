@@ -11,7 +11,7 @@ which avoids a circular import between the two modules.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 from .transcription import Note
 
@@ -66,3 +66,37 @@ def fit_score(notes: List[Note], tuning: Tuning) -> float:
         return 1.0
     fitting = sum(1 for note in notes if _fits(note.pitch, tuning))
     return fitting / len(notes)
+
+
+@dataclass
+class TuningSuggestion:
+    suggested: Tuning
+    confidence: float
+
+
+def suggest_alternate_tuning(notes: List[Note], selected: Tuning,
+                              min_confidence: float = 0.9,
+                              min_improvement: float = 0.1) -> Optional[TuningSuggestion]:
+    """Return a better-fitting tuning if one clearly explains `notes` better
+    than `selected`, else None.
+
+    "Clearly better" means: the candidate scores at least `min_confidence`,
+    AND it beats `selected`'s score by at least `min_improvement`. If ties
+    occur between candidates, the first one encountered in `TUNINGS` wins --
+    this pipeline cannot distinguish tunings that happen to fit the same set
+    of notes equally well (e.g. a song that never touches its lowest string
+    sounds identical in Drop D and D Standard).
+    """
+    selected_score = fit_score(notes, selected)
+    if selected_score >= min_confidence:
+        return None  # selected tuning already explains the notes well
+
+    best: Optional[TuningSuggestion] = None
+    for tuning in TUNINGS:
+        if tuning.name == selected.name:
+            continue
+        score = fit_score(notes, tuning)
+        if score >= min_confidence and score - selected_score >= min_improvement:
+            if best is None or score > best.confidence:
+                best = TuningSuggestion(suggested=tuning, confidence=score)
+    return best

@@ -7,6 +7,7 @@ from pipeline.tuning import (
     TUNINGS,
     find_tuning,
     fit_score,
+    suggest_alternate_tuning,
 )
 
 
@@ -50,3 +51,30 @@ def test_fit_score_penalizes_notes_below_lowest_open_string():
 def test_fit_score_is_one_for_empty_notes():
     tuning = find_tuning(STANDARD_E_A_D_G_B_E)
     assert fit_score([], tuning) == 1.0
+
+
+def test_suggest_alternate_tuning_detects_lower_tuning_from_low_notes():
+    standard = find_tuning(STANDARD_E_A_D_G_B_E)
+    # a riff that repeatedly hits a low D (38), which no string in Standard
+    # tuning can produce, alongside notes Standard covers fine
+    notes = [_note(38), _note(38), _note(45), _note(50), _note(55), _note(59),
+              _note(64), _note(38), _note(45)]
+    suggestion = suggest_alternate_tuning(notes, standard)
+    assert suggestion is not None
+    assert suggestion.suggested.open_string_midi[0] <= 38
+    assert suggestion.confidence >= 0.9
+
+
+def test_suggest_alternate_tuning_returns_none_when_selected_fits_well():
+    standard = find_tuning(STANDARD_E_A_D_G_B_E)
+    notes = [_note(40), _note(45), _note(50), _note(55), _note(59), _note(64)]
+    assert suggest_alternate_tuning(notes, standard) is None
+
+
+def test_suggest_alternate_tuning_returns_none_when_selected_already_scores_high_enough():
+    standard = find_tuning(STANDARD_E_A_D_G_B_E)
+    # one low outlier out of ten notes: Standard still scores 0.9, which
+    # already meets the confidence bar, so no alternate is even considered
+    notes = [_note(38), _note(40), _note(45), _note(50), _note(55), _note(59),
+              _note(64), _note(40), _note(45), _note(50)]
+    assert suggest_alternate_tuning(notes, standard) is None
