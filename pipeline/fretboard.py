@@ -1,5 +1,5 @@
-"""Step 5: map detected notes to (string, fret) positions on a standard
-EADGBE guitar neck.
+"""Step 5: map detected notes to (string, fret) positions on a guitar neck
+for a given tuning.
 
 Heuristic (intentionally simple, see module-level limitation below):
 for each note, or each near-simultaneous group of notes (a "chord grasp"),
@@ -14,8 +14,9 @@ Known limitations:
   barre chords, open-string ringing, and idiomatic fingerings. A real
   guitarist would frequently choose a different (often higher-position)
   fingering for musical or ergonomic reasons.
-- Notes outside the guitar's range (below open low E, or above MAX_FRET on
-  the high E) are silently dropped.
+- Notes outside the guitar's range for the given tuning (below the lowest
+  open string, or above MAX_FRET on the highest string) are silently
+  dropped.
 - Chords with more simultaneous notes than available open strings (>6, or
   >remaining strings after low-fret assignment) will have the excess notes
   dropped rather than re-voiced.
@@ -29,27 +30,24 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from .transcription import Note
+from .tuning import MAX_FRET, STANDARD_E_A_D_G_B_E, Tuning, find_tuning
 
-# Open string MIDI pitches, low E (string index 0) to high e (string index 5).
-OPEN_STRING_MIDI = [40, 45, 50, 55, 59, 64]  # E2 A2 D3 G3 B3 E4
-STRING_NAMES = ["E", "A", "D", "G", "B", "e"]
-MAX_FRET = 15
 CHORD_TOLERANCE = 0.05  # seconds; notes starting within this window are one "grasp"
 
 
 @dataclass
 class FrettedNote:
-    string: int  # 0 = low E ... 5 = high e
+    string: int  # 0 = lowest string ... 5 = highest string
     fret: int
     start: float
     end: float
     pitch: int
 
 
-def _fret_options(pitch: int) -> List[tuple]:
-    """All (string, fret) pairs that can produce `pitch`, lowest fret first."""
+def _fret_options(pitch: int, tuning: Tuning) -> List[tuple]:
+    """All (string, fret) pairs that can produce `pitch` on `tuning`, lowest fret first."""
     options = []
-    for string_idx, open_midi in enumerate(OPEN_STRING_MIDI):
+    for string_idx, open_midi in enumerate(tuning.open_string_midi):
         fret = pitch - open_midi
         if 0 <= fret <= MAX_FRET:
             options.append((string_idx, fret))
@@ -67,7 +65,9 @@ def _group_by_onset(notes: List[Note]) -> List[List[Note]]:
     return groups
 
 
-def map_notes_to_fretboard(notes: List[Note]) -> List[FrettedNote]:
+def map_notes_to_fretboard(notes: List[Note], tuning: Optional[Tuning] = None) -> List[FrettedNote]:
+    if tuning is None:
+        tuning = find_tuning(STANDARD_E_A_D_G_B_E)
     fretted: List[FrettedNote] = []
     for group in _group_by_onset(notes):
         used_strings = set()
@@ -75,7 +75,7 @@ def map_notes_to_fretboard(notes: List[Note]) -> List[FrettedNote]:
         # so giving them first pick reduces collisions.
         for note in sorted(group, key=lambda n: -n.pitch):
             chosen: Optional[tuple] = None
-            for string_idx, fret in _fret_options(note.pitch):
+            for string_idx, fret in _fret_options(note.pitch, tuning):
                 if string_idx not in used_strings:
                     chosen = (string_idx, fret)
                     break
