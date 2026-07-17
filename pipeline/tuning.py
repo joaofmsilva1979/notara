@@ -76,7 +76,8 @@ class TuningSuggestion:
 
 def suggest_alternate_tuning(notes: List[Note], selected: Tuning,
                               min_confidence: float = 0.9,
-                              min_improvement: float = 0.1) -> Optional[TuningSuggestion]:
+                              min_improvement: float = 0.1,
+                              min_notes: int = 8) -> Optional[TuningSuggestion]:
     """Return a better-fitting tuning if one clearly explains `notes` better
     than `selected`, else None.
 
@@ -86,7 +87,17 @@ def suggest_alternate_tuning(notes: List[Note], selected: Tuning,
     this pipeline cannot distinguish tunings that happen to fit the same set
     of notes equally well (e.g. a song that never touches its lowest string
     sounds identical in Drop D and D Standard).
+
+    Also returns None if there aren't at least `min_notes` transcribed notes
+    to base a suggestion on -- a handful of notes isn't enough signal to
+    trust the fit-score ratio (with only 1-2 notes, `fit_score` can only ever
+    be 0, 0.5, or 1.0, so a single spurious note -- e.g. a separation
+    artifact from basic-pitch -- could otherwise produce a maximally
+    "confident"-looking suggestion).
     """
+    if len(notes) < min_notes:
+        return None  # not enough signal to trust the fit-score ratio
+
     selected_score = fit_score(notes, selected)
     if selected_score >= min_confidence:
         return None  # selected tuning already explains the notes well

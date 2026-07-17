@@ -63,6 +63,7 @@ def test_suggest_alternate_tuning_detects_lower_tuning_from_low_notes():
     assert suggestion is not None
     assert suggestion.suggested.open_string_midi[0] <= 38
     assert suggestion.confidence >= 0.9
+    assert suggestion.suggested.name == DROP_D
 
 
 def test_suggest_alternate_tuning_returns_none_when_selected_fits_well():
@@ -77,4 +78,13 @@ def test_suggest_alternate_tuning_returns_none_when_selected_already_scores_high
     # already meets the confidence bar, so no alternate is even considered
     notes = [_note(38), _note(40), _note(45), _note(50), _note(55), _note(59),
               _note(64), _note(40), _note(45), _note(50)]
+    assert suggest_alternate_tuning(notes, standard) is None
+
+
+def test_suggest_alternate_tuning_returns_none_with_too_few_notes():
+    standard = find_tuning(STANDARD_E_A_D_G_B_E)
+    # only 2 notes, both below every string in Standard -- would otherwise
+    # suggest an alternate tuning at confidence 1.0, but there's not enough
+    # signal to trust that from 2 notes alone
+    notes = [_note(38), _note(38)]
     assert suggest_alternate_tuning(notes, standard) is None
