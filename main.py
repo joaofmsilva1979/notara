@@ -24,7 +24,7 @@ from pathlib import Path
 import librosa
 import numpy as np
 
-from pipeline import chord_detection, fretboard, key_detection, midi_export, separation, tab_render, transcription, voice_split
+from pipeline import chord_detection, fretboard, key_detection, midi_export, separation, tab_render, transcription, tuning, voice_split
 
 
 def parse_args() -> argparse.Namespace:
@@ -43,6 +43,10 @@ def parse_args() -> argparse.Namespace:
                               "2 = also split into a treble-register and a "
                               "bass-register tab (heuristic, see voice_split.py "
                               "docstring -- NOT true two-guitar separation)")
+    parser.add_argument("--tuning", default=tuning.STANDARD_E_A_D_G_B_E,
+                         choices=[t.name for t in tuning.TUNINGS],
+                         help="Guitar tuning to assume before fretboard mapping "
+                              "(default: %(default)s)")
     return parser.parse_args()
 
 
@@ -58,38 +62,52 @@ def main() -> None:
     work_dir.mkdir(exist_ok=True)
 
     try:
-        print("[1/6] Separating sources with Demucs (htdemucs_6s)...")
+        print("[1/7] Separating sources with Demucs (htdemucs_6s)...")
         harmonic_path = separation.separate(audio_path, work_dir, device=args.device)
 
-        print("[2/6] Transcribing notes with basic-pitch...")
+        print("[2/7] Transcribing notes with basic-pitch...")
         notes = transcription.transcribe(harmonic_path)
         print(f"       -> {len(notes)} notes detected")
 
-        print("[3/6] Loading harmonic mix for key/chord analysis...")
+        print("[3/7] Confirming tuning...")
+        selected_tuning = tuning.find_tuning(args.tuning)
+        suggestion = tuning.suggest_alternate_tuning(notes, selected_tuning)
+        if suggestion is not None:
+            print(f"       NOTE: {selected_tuning.name} doesn't fully match what's heard.")
+            print(f"       Suggestion: {suggestion.suggested.name} "
+                  f"(confidence={suggestion.confidence:.2f}). Re-run with "
+                  f"--tuning \"{suggestion.suggested.name}\" if that's correct.")
+        else:
+            print(f"       -> {selected_tuning.name} confirmed")
+
+        print("[4/7] Loading harmonic mix for key/chord analysis...")
         y, sr = librosa.load(harmonic_path, sr=None, mono=True)
 
-        print("[4/6] Detecting key (chroma + Krumhansl-Schmuckler)...")
+        print("[5/7] Detecting key (chroma + Krumhansl-Schmuckler)...")
         key_estimate = key_detection.detect_key(y, sr)
         print(f"       -> {key_estimate} (correlation={key_estimate.correlation:.2f})")
 
-        print("[5/6] Detecting chords (beat-synchronous chroma templates)...")
+        print("[6/7] Detecting chords (beat-synchronous chroma templates)...")
         chords = chord_detection.detect_chords(y, sr)
         tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
         tempo = float(np.asarray(tempo).reshape(-1)[0])
         print(f"       -> {len(chords)} bars, tempo ~{tempo:.1f} BPM")
 
-        print("[6/6] Mapping notes to fretboard and rendering tab...")
-        fretted_notes = fretboard.map_notes_to_fretboard(notes)
-        tab_render.write_tab(output_path, chords, fretted_notes, key_estimate, tempo, audio_path.name)
+        print("[7/7] Mapping notes to fretboard and rendering tab...")
+        fretted_notes = fretboard.map_notes_to_fretboard(notes, selected_tuning)
+        tab_render.write_tab(output_path, chords, fretted_notes, key_estimate, tempo,
+                              audio_path.name, tuning=selected_tuning)
 
         if args.voices == 2:
             treble_notes, bass_notes = voice_split.split_voices(fretted_notes)
             treble_path = output_path.with_name(f"{output_path.stem}_guitare_aigue.txt")
             bass_path = output_path.with_name(f"{output_path.stem}_guitare_grave.txt")
             tab_render.write_tab(treble_path, chords, treble_notes, key_estimate, tempo,
-                                  f"{audio_path.name} (voix aigue G/B/e -- heuristique, pas une vraie 2e guitare)")
+                                  f"{audio_path.name} (voix aigue G/B/e -- heuristique, pas une vraie 2e guitare)",
+                                  tuning=selected_tuning)
             tab_render.write_tab(bass_path, chords, bass_notes, key_estimate, tempo,
-                                  f"{audio_path.name} (voix grave E/A/D -- heuristique, pas une vraie 2e guitare)")
+                                  f"{audio_path.name} (voix grave E/A/D -- heuristique, pas une vraie 2e guitare)",
+                                  tuning=selected_tuning)
             print(f"Voice split: {treble_path}, {bass_path}")
 
         if args.export_midi:
