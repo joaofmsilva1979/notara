@@ -21,8 +21,9 @@ from pathlib import Path
 from typing import List
 
 from .chord_detection import ChordSegment
-from .fretboard import FrettedNote, STRING_NAMES
+from .fretboard import FrettedNote
 from .key_detection import KeyEstimate
+from .tuning import STANDARD_E_A_D_G_B_E, Tuning, find_tuning
 
 COLUMNS_PER_BAR = 16
 CELL_WIDTH = 3
@@ -46,12 +47,14 @@ def _place_note(grid: List[List[str]], note: FrettedNote, bar: ChordSegment) -> 
 
 def render_tab(bars: List[ChordSegment], notes: List[FrettedNote],
                key_estimate: KeyEstimate, tempo: float,
-               source_name: str, bars_per_line: int = 4) -> str:
+               source_name: str, tuning: Tuning = None, bars_per_line: int = 4) -> str:
+    if tuning is None:
+        tuning = find_tuning(STANDARD_E_A_D_G_B_E)
     out = []
     out.append(f"# Tab generated from: {source_name}")
     out.append(f"# Estimated key: {key_estimate}  (correlation={key_estimate.correlation:.2f})")
     out.append(f"# Estimated tempo: {tempo:.1f} BPM (assumed 4/4)")
-    out.append("# Tuning: standard EADGBE")
+    out.append(f"# Tuning: {tuning.name}")
     out.append("#")
     out.append("# LIMITS: chords/positions/rhythm below are approximate -- see")
     out.append("# pipeline/*.py module docstrings for known limitations of each stage.")
@@ -88,7 +91,7 @@ def render_tab(bars: List[ChordSegment], notes: List[FrettedNote],
             grids.append(grid)
 
         for row_idx in range(6):
-            row_str = STRING_NAMES[5 - row_idx] + "|"
+            row_str = tuning.string_names[5 - row_idx] + "|"
             for grid in grids:
                 cells = [cell.ljust(CELL_WIDTH, "-") for cell in grid[row_idx]]
                 row_str += "".join(cells) + "|"
@@ -100,6 +103,7 @@ def render_tab(bars: List[ChordSegment], notes: List[FrettedNote],
 
 
 def write_tab(path: Path, bars: List[ChordSegment], notes: List[FrettedNote],
-              key_estimate: KeyEstimate, tempo: float, source_name: str) -> None:
-    text = render_tab(bars, notes, key_estimate, tempo, source_name)
+              key_estimate: KeyEstimate, tempo: float, source_name: str,
+              tuning: Tuning = None) -> None:
+    text = render_tab(bars, notes, key_estimate, tempo, source_name, tuning)
     path.write_text(text, encoding="utf-8")
