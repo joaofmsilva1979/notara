@@ -102,11 +102,13 @@ def main() -> None:
             treble_notes, bass_notes = voice_split.split_voices(fretted_notes)
             treble_path = output_path.with_name(f"{output_path.stem}_guitare_aigue.txt")
             bass_path = output_path.with_name(f"{output_path.stem}_guitare_grave.txt")
+            treble_strings = "/".join(selected_tuning.string_names[3:])
+            bass_strings = "/".join(selected_tuning.string_names[:3])
             tab_render.write_tab(treble_path, chords, treble_notes, key_estimate, tempo,
-                                  f"{audio_path.name} (voix aigue G/B/e -- heuristique, pas une vraie 2e guitare)",
+                                  f"{audio_path.name} (voix aigue {treble_strings} -- heuristique, pas une vraie 2e guitare)",
                                   tuning=selected_tuning)
             tab_render.write_tab(bass_path, chords, bass_notes, key_estimate, tempo,
-                                  f"{audio_path.name} (voix grave E/A/D -- heuristique, pas une vraie 2e guitare)",
+                                  f"{audio_path.name} (voix grave {bass_strings} -- heuristique, pas une vraie 2e guitare)",
                                   tuning=selected_tuning)
             print(f"Voice split: {treble_path}, {bass_path}")
 
