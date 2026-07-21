@@ -2,7 +2,9 @@
 
 Uses the 6-stem model (htdemucs_6s), which has a dedicated "guitar" stem
 in addition to drums/bass/vocals/piano/other. We combine guitar + other
-into a single "harmonic" mix and discard drums/bass/vocals.
+into a single "harmonic" mix (for transcription and key detection) and
+also return the separated bass stem on its own (used by chord_detection.py
+to constrain the chord root). Drums/vocals/piano are still discarded.
 
 Known limitation: everything downstream depends on how well Demucs isolates
 guitar content. Bleed from drums/vocals into the guitar stem (or guitar
@@ -23,8 +25,8 @@ DEMUCS_MODEL = "htdemucs_6s"
 HARMONIC_STEMS = ("guitar", "other")
 
 
-def separate(audio_path: Path, work_dir: Path, device: str = "cpu") -> Path:
-    """Run Demucs and return the path to a combined guitar+other wav."""
+def separate(audio_path: Path, work_dir: Path, device: str = "cpu") -> tuple[Path, Path]:
+    """Run Demucs and return (harmonic_mix_path, bass_stem_path)."""
     out_dir = work_dir / "stems"
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -42,7 +44,12 @@ def separate(audio_path: Path, work_dir: Path, device: str = "cpu") -> Path:
     if not stem_dir.exists():
         raise FileNotFoundError(f"Demucs did not produce expected output at {stem_dir}")
 
-    return _combine_stems(stem_dir, work_dir)
+    bass_stem_path = stem_dir / "bass.wav"
+    if not bass_stem_path.exists():
+        raise FileNotFoundError(f"Demucs did not produce a bass stem at {bass_stem_path}")
+
+    harmonic_path = _combine_stems(stem_dir, work_dir)
+    return harmonic_path, bass_stem_path
 
 
 def _combine_stems(stem_dir: Path, work_dir: Path) -> Path:
