@@ -3,8 +3,9 @@
 
 Pipeline: Demucs separation -> basic-pitch polyphonic transcription ->
 key detection (chroma + Krumhansl-Schmuckler) -> chord detection
-(chroma template matching) -> tuning-aware fretboard mapping (see --tuning) ->
-ASCII tab export.
+(chroma template matching, bass-root and diatonic-key aware, hysteresis-
+smoothed) -> tuning-aware fretboard mapping (see --tuning) -> ASCII tab
+export.
 
 See pipeline/*.py module docstrings for the known limitations of each stage
 (chord ambiguity, non-idiomatic fret positions, dependency on Demucs
