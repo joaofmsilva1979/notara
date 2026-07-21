@@ -25,6 +25,8 @@ from typing import List, Optional
 import librosa
 import numpy as np
 
+from .key_detection import KeyEstimate
+
 NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 
 # (suffix, semitone intervals from root)
@@ -53,6 +55,9 @@ DIATONIC_BONUS = 0.03
 # keep the previous bar's label instead of switching to the current bar's
 # own (different) winning label.
 HYSTERESIS_MARGIN = 0.05
+
+MAJOR_SCALE_INTERVALS = [0, 2, 4, 5, 7, 9, 11]
+MINOR_SCALE_INTERVALS = [0, 2, 3, 5, 7, 8, 10]  # natural minor
 
 
 @dataclass
@@ -118,6 +123,13 @@ def _bass_root_pitch_class(bass_chroma_vec: np.ndarray, threshold: float = BASS_
     if fraction < threshold:
         return None
     return int(np.argmax(bass_chroma_vec))
+
+
+def _diatonic_roots(key_estimate: KeyEstimate) -> set[int]:
+    """The 7 scale-degree root pitch classes for `key_estimate`'s tonic/mode."""
+    tonic_index = NOTE_NAMES.index(key_estimate.tonic)
+    intervals = MAJOR_SCALE_INTERVALS if key_estimate.mode == "major" else MINOR_SCALE_INTERVALS
+    return {(tonic_index + interval) % 12 for interval in intervals}
 
 
 def _best_chord(chroma_vec: np.ndarray, forced_root: Optional[int] = None,

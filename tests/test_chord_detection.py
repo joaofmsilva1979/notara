@@ -85,3 +85,20 @@ def test_best_chord_diatonic_bonus_breaks_a_genuine_tie_against_a_non_diatonic_r
     # strictly dominates).
     label, _score = _best_chord(tied_vec, diatonic_roots={9})
     assert label != "C"
+
+
+from pipeline.chord_detection import _diatonic_roots
+from pipeline.key_detection import KeyEstimate
+
+
+def test_diatonic_roots_for_c_major():
+    key = KeyEstimate(tonic="C", mode="major", correlation=0.9)
+    assert _diatonic_roots(key) == {0, 2, 4, 5, 7, 9, 11}
+
+
+def test_diatonic_roots_for_a_minor():
+    key = KeyEstimate(tonic="A", mode="minor", correlation=0.9)
+    # A natural minor uses the same 7 pitch classes as its relative major
+    # (C major) -- {A, B, C, D, E, F, G} = {9, 11, 0, 2, 4, 5, 7} -- which is
+    # a useful sanity check that the interval math is right.
+    assert _diatonic_roots(key) == {0, 2, 4, 5, 7, 9, 11}
