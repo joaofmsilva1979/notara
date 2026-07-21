@@ -20,7 +20,7 @@ Known limitations:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 import librosa
 import numpy as np
@@ -38,6 +38,22 @@ CHORD_TYPES = [
 
 BEATS_PER_BAR = 4  # assumes 4/4 time (see module docstring)
 
+# Fraction of a bar's bass chroma energy that must be concentrated in a single
+# pitch class for that pitch class to be treated as a forced chord root.
+# Heuristic/tunable, like CHORD_TOLERANCE elsewhere in this pipeline -- not
+# derived from any formal model.
+BASS_CLARITY_THRESHOLD = 0.35
+
+# Additive score bonus (on the [0, 1] cosine-similarity scale) given to a
+# chord template whose root is diatonic to the detected song key, applied
+# only when the bass didn't give a clear/forced root for that bar.
+DIATONIC_BONUS = 0.03
+
+# Maximum score gap (cosine-similarity scale) for hysteresis smoothing to
+# keep the previous bar's label instead of switching to the current bar's
+# own (different) winning label.
+HYSTERESIS_MARGIN = 0.05
+
 
 @dataclass
 class ChordSegment:
@@ -45,6 +61,14 @@ class ChordSegment:
     start: float
     end: float
     label: str
+
+
+@dataclass
+class BarResult:
+    label: str
+    score: float
+    root_forced: bool
+    chroma: np.ndarray
 
 
 def _build_templates() -> List[tuple]:
@@ -62,6 +86,20 @@ def _build_templates() -> List[tuple]:
 
 
 _TEMPLATES = _build_templates()
+
+
+def _bass_root_pitch_class(bass_chroma_vec: np.ndarray, threshold: float = BASS_CLARITY_THRESHOLD) -> Optional[int]:
+    """Return the dominant pitch class (0-11) if `bass_chroma_vec` is
+    concentrated enough on one bin to trust as a forced chord root, else None
+    (bass silent, ambiguous, or playing a moving/walking line for this bar).
+    """
+    total = float(np.sum(bass_chroma_vec))
+    if total <= 0:
+        return None
+    fraction = float(np.max(bass_chroma_vec)) / total
+    if fraction < threshold:
+        return None
+    return int(np.argmax(bass_chroma_vec))
 
 
 def _best_chord(chroma_vec: np.ndarray) -> str:
