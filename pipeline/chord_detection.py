@@ -1,4 +1,6 @@
-"""Step 4: chord detection via beat-synchronous chroma + template matching.
+"""Step 4: chord detection via beat-synchronous chroma + template matching,
+constrained by the separated bass line and the detected song key, then
+smoothed across bars.
 
 We beat-track the harmonic mix, group beats into bars (assuming a constant
 4/4 meter -- see limitation below), average the chromagram within each bar,
@@ -6,6 +8,21 @@ and match that averaged chroma vector against a bank of chord templates
 (major, minor, dominant 7, major 7, minor 7 for all 12 roots) using cosine
 similarity. This is the same family of technique as the classic
 Fujishima/chroma-template chord recognizers; it is not a learned model.
+
+Two additional signals refine this per bar:
+- If the separated bass stem clearly sustains one note for that bar (see
+  `_bass_root_pitch_class`), the chord root is forced to that note and only
+  that root's 5 templates are searched.
+- Otherwise, templates whose root is diatonic to the detected song key get a
+  small score bonus (see `_diatonic_roots`/`DIATONIC_BONUS`) -- a soft nudge
+  for ambiguous bars, not a hard filter.
+
+After all bars are scored, `_smooth_labels` applies bar-to-bar hysteresis:
+an ambiguous bar (bass didn't force its root) whose winning label differs
+from its predecessor, but only narrowly beats the predecessor's label on
+this bar's own chroma, is pulled back to match its predecessor -- this
+corrects incoherent bar-to-bar flip-flopping. Bars with a bass-forced root,
+and genuinely silent ("N.C.") bars, are never altered by smoothing.
 
 Known limitations:
 - Only 5 chord qualities x 12 roots (60 templates) are covered. sus2/sus4,
@@ -16,6 +33,20 @@ Known limitations:
   will shift bar boundaries and misalign chords with the tab.
 - One chord label per bar is a simplification; genuine chord changes within
   a bar (e.g. two chords per bar) are collapsed into a single "best fit".
+- Bass-root forcing assumes the bass plays the chord's root. A bass line
+  doubling a non-root chord tone, or sustaining a stable pedal tone that
+  isn't the root, will force an incorrect root (rare, but not detected).
+- The diatonic bonus is a soft nudge; a wrongly-detected song key (a
+  separate, existing limitation of key_detection.py) biases ambiguous-bar
+  disambiguation in the wrong direction. Bars with a forced root or a clear
+  chroma winner are unaffected.
+- Hysteresis only fixes oscillation between close-scoring candidates; a bar
+  that is confidently but wrongly detected (e.g. from bad Demucs separation
+  bleed) is not corrected by smoothing. Over a long run of consecutive
+  ambiguous bars each only narrowly beating the previous one, hysteresis can
+  also "drift" the whole run toward an early bar's read rather than any
+  individual bar's own best evidence -- a known trade-off of any simple
+  bar-to-bar debounce scheme.
 """
 from __future__ import annotations
 
@@ -176,7 +207,9 @@ def _smooth_labels(bar_results: List[BarResult], margin: float = HYSTERESIS_MARG
     return labels
 
 
-def detect_chords(y: np.ndarray, sr: int) -> List[ChordSegment]:
+def detect_chords(y: np.ndarray, sr: int, bass_y: Optional[np.ndarray] = None,
+                   bass_sr: Optional[int] = None,
+                   key_estimate: Optional[KeyEstimate] = None) -> tuple[List[ChordSegment], float]:
     tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr, units="frames")
     beat_times = librosa.frames_to_time(beat_frames, sr=sr)
 
@@ -187,11 +220,20 @@ def detect_chords(y: np.ndarray, sr: int) -> List[ChordSegment]:
     chroma = librosa.feature.chroma_cqt(y=y, sr=sr)
     chroma_times = librosa.frames_to_time(np.arange(chroma.shape[1]), sr=sr)
 
+    bass_chroma = None
+    bass_chroma_times = None
+    if bass_y is not None:
+        bass_chroma = librosa.feature.chroma_cqt(y=bass_y, sr=bass_sr)
+        bass_chroma_times = librosa.frames_to_time(np.arange(bass_chroma.shape[1]), sr=bass_sr)
+
+    diatonic_roots = _diatonic_roots(key_estimate) if key_estimate is not None else None
+
     bar_starts = beat_times[::BEATS_PER_BAR]
     duration = librosa.get_duration(y=y, sr=sr)
     bar_bounds = list(bar_starts) + [duration]
 
-    segments: List[ChordSegment] = []
+    bar_results: List[BarResult] = []
+    bar_indices: List[int] = []
     for i in range(len(bar_bounds) - 1):
         start, end = bar_bounds[i], bar_bounds[i + 1]
         if end <= start:
@@ -200,7 +242,29 @@ def detect_chords(y: np.ndarray, sr: int) -> List[ChordSegment]:
         if not np.any(mask):
             continue
         bar_chroma = chroma[:, mask].mean(axis=1)
-        label = _best_chord(bar_chroma)
-        segments.append(ChordSegment(bar_index=i, start=start, end=end, label=label))
 
-    return segments
+        forced_root = None
+        if bass_chroma is not None:
+            bass_mask = (bass_chroma_times >= start) & (bass_chroma_times < end)
+            if np.any(bass_mask):
+                bar_bass_chroma = bass_chroma[:, bass_mask].mean(axis=1)
+                forced_root = _bass_root_pitch_class(bar_bass_chroma)
+
+        if forced_root is not None:
+            label, score = _best_chord(bar_chroma, forced_root=forced_root)
+        else:
+            label, score = _best_chord(bar_chroma, diatonic_roots=diatonic_roots)
+
+        bar_results.append(BarResult(label=label, score=score,
+                                      root_forced=forced_root is not None,
+                                      chroma=bar_chroma))
+        bar_indices.append(i)
+
+    smoothed_labels = _smooth_labels(bar_results)
+
+    segments: List[ChordSegment] = []
+    for idx, label in zip(bar_indices, smoothed_labels):
+        start, end = bar_bounds[idx], bar_bounds[idx + 1]
+        segments.append(ChordSegment(bar_index=idx, start=start, end=end, label=label))
+
+    return segments, float(np.asarray(tempo).reshape(-1)[0])
