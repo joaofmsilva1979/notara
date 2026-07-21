@@ -102,3 +102,58 @@ def test_diatonic_roots_for_a_minor():
     # (C major) -- {A, B, C, D, E, F, G} = {9, 11, 0, 2, 4, 5, 7} -- which is
     # a useful sanity check that the interval math is right.
     assert _diatonic_roots(key) == {0, 2, 4, 5, 7, 9, 11}
+
+
+from pipeline.chord_detection import BarResult, HYSTERESIS_MARGIN, _smooth_labels
+
+
+def test_smooth_labels_pulls_an_isolated_ambiguous_bar_to_match_its_neighbors():
+    c_template = next(t for root, label, t in _TEMPLATES if label == "C")
+    am_template = next(t for root, label, t in _TEMPLATES if label == "Am")
+    tied_chroma = c_template + am_template
+    am_score = _score_label(tied_chroma, "Am")
+
+    bars = [
+        BarResult(label="C", score=1.0, root_forced=False, chroma=c_template),
+        BarResult(label="Am", score=am_score, root_forced=False, chroma=tied_chroma),
+        BarResult(label="C", score=1.0, root_forced=False, chroma=c_template),
+    ]
+    assert _smooth_labels(bars) == ["C", "C", "C"]
+
+
+def test_smooth_labels_never_changes_a_root_forced_bar():
+    c_template = next(t for root, label, t in _TEMPLATES if label == "C")
+    am_template = next(t for root, label, t in _TEMPLATES if label == "Am")
+    tied_chroma = c_template + am_template
+    am_score = _score_label(tied_chroma, "Am")
+
+    bars = [
+        BarResult(label="C", score=1.0, root_forced=False, chroma=c_template),
+        BarResult(label="Am", score=am_score, root_forced=True, chroma=tied_chroma),
+        BarResult(label="C", score=1.0, root_forced=False, chroma=c_template),
+    ]
+    assert _smooth_labels(bars) == ["C", "Am", "C"]
+
+
+def test_smooth_labels_keeps_a_clearly_dominant_bar():
+    # C and F# major triads share no pitch classes at all (disjoint support),
+    # so their raw cosine similarity is exactly 0 -- a gap of 1.0, far above
+    # HYSTERESIS_MARGIN, so F# must never be smoothed away here.
+    c_template = next(t for root, label, t in _TEMPLATES if label == "C")
+    fsharp_template = next(t for root, label, t in _TEMPLATES if label == "F#")
+
+    bars = [
+        BarResult(label="C", score=1.0, root_forced=False, chroma=c_template),
+        BarResult(label="F#", score=1.0, root_forced=False, chroma=fsharp_template),
+    ]
+    assert _smooth_labels(bars) == ["C", "F#"]
+
+
+def test_smooth_labels_never_alters_the_first_bar():
+    c_template = next(t for root, label, t in _TEMPLATES if label == "C")
+    bars = [BarResult(label="C", score=1.0, root_forced=False, chroma=c_template)]
+    assert _smooth_labels(bars) == ["C"]
+
+
+def test_smooth_labels_handles_empty_input():
+    assert _smooth_labels([]) == []

@@ -150,6 +150,31 @@ def _best_chord(chroma_vec: np.ndarray, forced_root: Optional[int] = None,
     return best_label, best_score
 
 
+def _smooth_labels(bar_results: List[BarResult], margin: float = HYSTERESIS_MARGIN) -> List[str]:
+    """Hysteresis pass: for each bar whose root wasn't forced by the bass and
+    whose label differs from the previous (already-smoothed) bar's label, keep
+    the previous label instead if it scores within `margin` of this bar's own
+    winning score against this bar's own chroma. Bars with `root_forced=True`
+    are never altered -- bass evidence takes priority over smoothing. The
+    first bar has no predecessor, so it's never altered either.
+    """
+    if not bar_results:
+        return []
+    labels = [bar_results[0].label]
+    for i in range(1, len(bar_results)):
+        current = bar_results[i]
+        previous_label = labels[i - 1]
+        if current.root_forced or current.label == previous_label or previous_label == "N.C.":
+            labels.append(current.label)
+            continue
+        previous_label_score_here = _score_label(current.chroma, previous_label)
+        if current.score - previous_label_score_here <= margin:
+            labels.append(previous_label)
+        else:
+            labels.append(current.label)
+    return labels
+
+
 def detect_chords(y: np.ndarray, sr: int) -> List[ChordSegment]:
     tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr, units="frames")
     beat_times = librosa.frames_to_time(beat_frames, sr=sr)
