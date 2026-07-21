@@ -24,7 +24,7 @@ from pathlib import Path
 
 import librosa
 
-from pipeline import chord_detection, fretboard, key_detection, midi_export, separation, tab_render, transcription, tuning, voice_split
+from pipeline import chord_detection, fretboard, key_detection, midi_export, pdf_export, separation, tab_render, transcription, tuning, voice_split
 
 
 def parse_args() -> argparse.Namespace:
@@ -38,6 +38,11 @@ def parse_args() -> argparse.Namespace:
                          help="Keep Demucs stems on disk next to the output (default: on)")
     parser.add_argument("--export-midi", action="store_true",
                          help="Also export the quantized/fretted notes as a .mid file")
+    parser.add_argument("--export-pdf", action="store_true",
+                         help="Also export a printable PDF (Courier, portrait, "
+                              "paginated) of the main tab")
+    parser.add_argument("--pdf-font-size", type=int, default=8, choices=[7, 8],
+                         help="Font size for --export-pdf output (default: %(default)s)")
     parser.add_argument("--voices", type=int, default=1, choices=[1, 2],
                          help="1 = single combined tab (default). "
                               "2 = also split into a treble-register and a "
@@ -103,18 +108,33 @@ def main() -> None:
             bass_path = output_path.with_name(f"{output_path.stem}_guitare_grave.txt")
             treble_strings = "/".join(selected_tuning.string_names[3:])
             bass_strings = "/".join(selected_tuning.string_names[:3])
+            treble_label = f"{audio_path.name} (voix aigue {treble_strings} -- heuristique, pas une vraie 2e guitare)"
+            bass_label = f"{audio_path.name} (voix grave {bass_strings} -- heuristique, pas une vraie 2e guitare)"
             tab_render.write_tab(treble_path, chords, treble_notes, key_estimate, tempo,
-                                  f"{audio_path.name} (voix aigue {treble_strings} -- heuristique, pas une vraie 2e guitare)",
-                                  tuning=selected_tuning)
+                                  treble_label, tuning=selected_tuning)
             tab_render.write_tab(bass_path, chords, bass_notes, key_estimate, tempo,
-                                  f"{audio_path.name} (voix grave {bass_strings} -- heuristique, pas une vraie 2e guitare)",
-                                  tuning=selected_tuning)
+                                  bass_label, tuning=selected_tuning)
             print(f"Voice split: {treble_path}, {bass_path}")
+
+            if args.export_pdf:
+                treble_pdf_path = output_path.with_name(f"{output_path.stem}_guitare_aigue.pdf")
+                bass_pdf_path = output_path.with_name(f"{output_path.stem}_guitare_grave.pdf")
+                pdf_export.export_pdf(treble_pdf_path, chords, treble_notes, key_estimate, tempo,
+                                       treble_label, selected_tuning, font_size=args.pdf_font_size)
+                pdf_export.export_pdf(bass_pdf_path, chords, bass_notes, key_estimate, tempo,
+                                       bass_label, selected_tuning, font_size=args.pdf_font_size)
+                print(f"Voice split PDF: {treble_pdf_path}, {bass_pdf_path}")
 
         if args.export_midi:
             midi_path = output_path.with_suffix(".mid")
             midi_export.export_midi(midi_path, fretted_notes, tempo)
             print(f"MIDI export: {midi_path}")
+
+        if args.export_pdf:
+            pdf_path = output_path.with_suffix(".pdf")
+            pdf_export.export_pdf(pdf_path, chords, fretted_notes, key_estimate, tempo,
+                                   audio_path.name, selected_tuning, font_size=args.pdf_font_size)
+            print(f"PDF export: {pdf_path}")
 
         print(f"\nDone. Tab written to: {output_path}")
 
