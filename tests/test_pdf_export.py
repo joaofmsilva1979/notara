@@ -15,6 +15,15 @@ def test_blocks_per_page_fits_at_least_as_many_blocks_at_the_smaller_font():
     assert _blocks_per_page(7) >= _blocks_per_page(8)
 
 
+def test_blocks_per_page_exact_values_for_a4_with_36pt_margins():
+    # Pins down the actual arithmetic (hand-verified: PAGE_HEIGHT=841.8898,
+    # line_height=9.2 at 8pt / 8.05 at 7pt, 5 header line-heights + 2*36pt
+    # margins reserved) so a stub that always returns a fixed positive
+    # number can't silently pass the two tests above.
+    assert _blocks_per_page(8) == 9
+    assert _blocks_per_page(7) == 11
+
+
 def test_split_into_blocks_groups_lines_into_chunks_of_eight():
     lines = [f"line{i}" for i in range(16)]
     blocks = _split_into_blocks(lines)
