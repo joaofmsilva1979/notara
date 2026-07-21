@@ -22,7 +22,6 @@ import sys
 from pathlib import Path
 
 import librosa
-import numpy as np
 
 from pipeline import chord_detection, fretboard, key_detection, midi_export, separation, tab_render, transcription, tuning, voice_split
 
