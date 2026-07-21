@@ -63,7 +63,7 @@ def main() -> None:
 
     try:
         print("[1/7] Separating sources with Demucs (htdemucs_6s)...")
-        harmonic_path = separation.separate(audio_path, work_dir, device=args.device)
+        harmonic_path, bass_stem_path = separation.separate(audio_path, work_dir, device=args.device)
 
         print("[2/7] Transcribing notes with basic-pitch...")
         notes = transcription.transcribe(harmonic_path)
@@ -82,15 +82,14 @@ def main() -> None:
 
         print("[4/7] Loading harmonic mix for key/chord analysis...")
         y, sr = librosa.load(harmonic_path, sr=None, mono=True)
+        bass_y, bass_sr = librosa.load(bass_stem_path, sr=None, mono=True)
 
         print("[5/7] Detecting key (chroma + Krumhansl-Schmuckler)...")
         key_estimate = key_detection.detect_key(y, sr)
         print(f"       -> {key_estimate} (correlation={key_estimate.correlation:.2f})")
 
-        print("[6/7] Detecting chords (beat-synchronous chroma templates)...")
-        chords = chord_detection.detect_chords(y, sr)
-        tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
-        tempo = float(np.asarray(tempo).reshape(-1)[0])
+        print("[6/7] Detecting chords (bass-root + diatonic-key aware, hysteresis-smoothed)...")
+        chords, tempo = chord_detection.detect_chords(y, sr, bass_y, bass_sr, key_estimate)
         print(f"       -> {len(chords)} bars, tempo ~{tempo:.1f} BPM")
 
         print("[7/7] Mapping notes to fretboard and rendering tab...")
