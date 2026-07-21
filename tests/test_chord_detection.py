@@ -44,6 +44,20 @@ def test_best_chord_with_forced_root_only_searches_that_root():
     assert label.startswith("G")  # G, Gm, G7, Gmaj7, or Gm7 -- never C-rooted
 
 
+def test_best_chord_with_forced_root_zero_is_not_treated_as_falsy():
+    # forced_root=0 is pitch class C -- the one value where a careless
+    # `if forced_root:` (instead of `if forced_root is not None:`) would
+    # silently behave as if no root were forced. Use a vector shaped like a
+    # G major chord (root 7) to make sure forcing root=0 actually restricts
+    # the search to C's 5 templates instead of the vector's "natural" winner.
+    g_major_vec = np.zeros(12)
+    g_major_vec[7] = 1.0   # G
+    g_major_vec[11] = 0.8  # B
+    g_major_vec[2] = 1.0   # D
+    label, _score = _best_chord(g_major_vec, forced_root=0)
+    assert label.startswith("C")  # C, Cm, C7, Cmaj7, or Cm7 -- never G-rooted
+
+
 def test_best_chord_diatonic_bonus_does_not_override_a_clear_winner():
     # A pure, unambiguous F# major shape (root 6). "F#" isn't in this
     # (deliberately non-musical) diatonic set, but the bonus (0.03) is far
