@@ -60,3 +60,48 @@ def _blocks_per_page(font_size: int) -> int:
 def _split_into_blocks(body_lines: List[str]) -> List[List[str]]:
     """Group `body_lines` into chunks of `LINES_PER_BLOCK` lines each."""
     return [body_lines[i:i + LINES_PER_BLOCK] for i in range(0, len(body_lines), LINES_PER_BLOCK)]
+
+
+def export_pdf(path: Path, bars: List[ChordSegment], notes: List[FrettedNote],
+                key_estimate: KeyEstimate, tempo: float, source_name: str,
+                tuning: Tuning, font_size: int = 8) -> None:
+    blocks_per_page = _blocks_per_page(font_size)
+    if blocks_per_page < 1:
+        raise ValueError(
+            f"font_size={font_size} leaves no room for even one tab block per "
+            f"A4 page with {MARGIN}pt margins -- reduce font_size or increase page size"
+        )
+
+    text = render_tab(bars, notes, key_estimate, tempo, source_name, tuning,
+                       bars_per_line=BARS_PER_LINE_FOR_PDF)
+    all_lines = text.splitlines()
+    body_lines = all_lines[8:]  # skip the 7 '#'-comment header lines + 1 blank line
+    blocks = _split_into_blocks(body_lines)
+
+    page_groups = [blocks[i:i + blocks_per_page] for i in range(0, len(blocks), blocks_per_page)] or [[]]
+    total_pages = len(page_groups)
+
+    pdf = canvas.Canvas(str(path), pagesize=A4)
+    line_height = _line_height(font_size)
+
+    for page_number, page_blocks in enumerate(page_groups, start=1):
+        y = PAGE_HEIGHT - MARGIN
+        pdf.setFont("Courier-Bold", font_size)
+        pdf.drawString(MARGIN, y, source_name)
+        y -= line_height
+
+        pdf.setFont("Courier", font_size)
+        pdf.drawString(MARGIN, y, f"{key_estimate}  |  {tempo:.1f} BPM  |  {tuning.name}")
+        y -= line_height
+
+        pdf.drawString(MARGIN, y, f"Page {page_number}/{total_pages}")
+        y -= line_height * 2  # blank spacer before the tab body
+
+        for block in page_blocks:
+            for line in block:
+                pdf.drawString(MARGIN, y, line)
+                y -= line_height
+
+        pdf.showPage()
+
+    pdf.save()
