@@ -140,7 +140,7 @@ def main() -> None:
 
     finally:
         if args.keep_stems:
-            stems_dest = audio_path.parent / f"{audio_path.stem}_stems"
+            stems_dest = output_path.parent / f"{audio_path.stem}_stems"
             src_stems = work_dir / "stems"
             if src_stems.exists():
                 if stems_dest.exists():
