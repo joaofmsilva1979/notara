@@ -157,3 +157,15 @@ def test_smooth_labels_never_alters_the_first_bar():
 
 def test_smooth_labels_handles_empty_input():
     assert _smooth_labels([]) == []
+
+
+def test_smooth_labels_never_overwrites_a_genuinely_silent_bar():
+    c_template = next(t for root, label, t in _TEMPLATES if label == "C")
+    silent_chroma = np.zeros(12)
+
+    bars = [
+        BarResult(label="C", score=1.0, root_forced=False, chroma=c_template),
+        BarResult(label="N.C.", score=0.0, root_forced=False, chroma=silent_chroma),
+        BarResult(label="C", score=1.0, root_forced=False, chroma=c_template),
+    ]
+    assert _smooth_labels(bars) == ["C", "N.C.", "C"]

@@ -156,7 +156,8 @@ def _smooth_labels(bar_results: List[BarResult], margin: float = HYSTERESIS_MARG
     the previous label instead if it scores within `margin` of this bar's own
     winning score against this bar's own chroma. Bars with `root_forced=True`
     are never altered -- bass evidence takes priority over smoothing. The
-    first bar has no predecessor, so it's never altered either.
+    first bar has no predecessor, so it's never altered either. Genuinely
+    silent bars (label "N.C.") are never altered in either direction.
     """
     if not bar_results:
         return []
@@ -164,7 +165,7 @@ def _smooth_labels(bar_results: List[BarResult], margin: float = HYSTERESIS_MARG
     for i in range(1, len(bar_results)):
         current = bar_results[i]
         previous_label = labels[i - 1]
-        if current.root_forced or current.label == previous_label or previous_label == "N.C.":
+        if current.root_forced or current.label == previous_label or previous_label == "N.C." or current.label == "N.C.":
             labels.append(current.label)
             continue
         previous_label_score_here = _score_label(current.chroma, previous_label)
