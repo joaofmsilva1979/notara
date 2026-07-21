@@ -81,11 +81,29 @@ def _build_templates() -> List[tuple]:
                 weight = 1.0 if i in (0, len(intervals) - 1) else 0.8
                 vec[(root + interval) % 12] = weight
             label = f"{NOTE_NAMES[root]}{suffix}"
-            templates.append((label, vec / np.linalg.norm(vec)))
+            templates.append((root, label, vec / np.linalg.norm(vec)))
     return templates
 
 
-_TEMPLATES = _build_templates()
+_TEMPLATES = _build_templates()  # List[Tuple[int, str, np.ndarray]] = (root_pitch_class, label, template_vector)
+
+
+def _score_label(chroma_vec: np.ndarray, label: str) -> float:
+    """Cosine similarity between `chroma_vec` and the named chord template."""
+    # Validate label exists first, before checking norm
+    template = None
+    for _root, template_label, tmpl in _TEMPLATES:
+        if template_label == label:
+            template = tmpl
+            break
+    if template is None:
+        raise ValueError(f"Unknown chord label: {label!r}")
+
+    norm = np.linalg.norm(chroma_vec)
+    if norm == 0:
+        return 0.0
+    normalized = chroma_vec / norm
+    return float(np.dot(normalized, template))
 
 
 def _bass_root_pitch_class(bass_chroma_vec: np.ndarray, threshold: float = BASS_CLARITY_THRESHOLD) -> Optional[int]:
@@ -102,17 +120,22 @@ def _bass_root_pitch_class(bass_chroma_vec: np.ndarray, threshold: float = BASS_
     return int(np.argmax(bass_chroma_vec))
 
 
-def _best_chord(chroma_vec: np.ndarray) -> str:
+def _best_chord(chroma_vec: np.ndarray, forced_root: Optional[int] = None,
+                 diatonic_roots: Optional[set[int]] = None) -> tuple[str, float]:
     norm = np.linalg.norm(chroma_vec)
     if norm == 0:
-        return "N.C."  # no chord / silence
+        return "N.C.", 0.0  # no chord / silence
     normalized = chroma_vec / norm
     best_label, best_score = "N.C.", -1.0
-    for label, template in _TEMPLATES:
+    for root, label, template in _TEMPLATES:
+        if forced_root is not None and root != forced_root:
+            continue
         score = float(np.dot(normalized, template))
+        if forced_root is None and diatonic_roots is not None and root in diatonic_roots:
+            score += DIATONIC_BONUS
         if score > best_score:
             best_label, best_score = label, score
-    return best_label
+    return best_label, best_score
 
 
 def detect_chords(y: np.ndarray, sr: int) -> List[ChordSegment]:
