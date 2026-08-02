@@ -32,7 +32,7 @@ C_SHARP_STANDARD = "C# Standard"
 C_STANDARD = "C Standard"
 DROP_C = "Drop C"
 DROP_B = "Drop B"
-DROP_A_SIX = "Drop A"
+DROP_A = "Drop A"
 OPEN_E = "Open E"
 OPEN_A = "Open A"
 OPEN_C = "Open C"
@@ -49,7 +49,7 @@ EIGHT_STRING_DROP_E = "8-String Drop E"
 @dataclass(frozen=True)
 class Tuning:
     name: str
-    open_string_midi: List[int]  # lowest string to highest string, 6 values
+    open_string_midi: List[int]  # lowest string to highest string
     string_names: List[str]
 
 
@@ -66,7 +66,7 @@ TUNINGS: List[Tuning] = [
     Tuning(C_STANDARD,           [36, 41, 46, 51, 55, 60], ["C", "F", "Bb", "Eb", "G", "c"]),
     Tuning(DROP_C,               [36, 43, 48, 53, 57, 62], ["C", "G", "C", "F", "A", "d"]),
     Tuning(DROP_B,               [35, 42, 47, 52, 56, 61], ["B", "F#", "B", "E", "G#", "c#"]),
-    Tuning(DROP_A_SIX,           [33, 40, 45, 50, 54, 59], ["A", "E", "A", "D", "F#", "b"]),
+    Tuning(DROP_A,               [33, 40, 45, 50, 54, 59], ["A", "E", "A", "D", "F#", "b"]),
     Tuning(OPEN_E,               [40, 47, 52, 56, 59, 64], ["E", "B", "E", "G#", "B", "e"]),
     Tuning(OPEN_A,               [40, 45, 52, 57, 61, 64], ["E", "A", "E", "A", "C#", "e"]),
     Tuning(OPEN_C,               [36, 43, 48, 55, 60, 64], ["C", "G", "C", "G", "C", "e"]),
