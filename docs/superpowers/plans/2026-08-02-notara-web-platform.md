@@ -16,6 +16,7 @@
 # New files
 pipeline/vocal_tab.py          # vocal melody transcription module
 pipeline/drum_summary.py       # drum rhythm analysis module
+pipeline/piano_tab.py          # keyboard/keys MIDI detector (Demucs piano stem)
 api/__init__.py                # empty, makes api/ a package
 api/main.py                    # FastAPI app + CORS + lifespan
 api/jobs.py                    # in-memory job store + Job dataclass
@@ -25,11 +26,15 @@ api/requirements.txt           # fastapi, uvicorn, yt-dlp, python-multipart + pi
 index.html                     # full single-page app (NAV + TOOL + ABOUT)
 css/main.css                   # all styles (Warm Ruby palette, responsive)
 js/config.js                   # API_BASE_URL constant
-js/app.js                      # upload, options, job submit, progress polling, tab display
+js/app.js                      # upload, options, job submit, progress polling, tab display, PWA install
 js/playback.js                 # audio playback + bar-sync highlight
+manifest.json                  # PWA manifest (icon, theme, name)
 og-image.svg                   # 1200×630 social preview card (SVG)
 sitemap.xml                    # single-URL sitemap
 robots.txt                     # Allow: /, Sitemap pointer
+
+# Copied files
+logo/notara-logo-simple.png    # already exists — copied to repo root as notara-logo.png
 
 # Modified files
 pipeline/tuning.py             # add 15 new tunings (11 six-string + 4 extended)
@@ -1300,7 +1305,7 @@ body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: 
 /* NAV */
 nav { background: var(--white); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
 .logo { display: flex; align-items: center; gap: 9px; }
-.logo-box { width: 22px; height: 22px; background: var(--red); border-radius: 4px; }
+.logo-img { width: 28px; height: 28px; object-fit: contain; }
 .logo-text { font-size: 16px; font-weight: 800; letter-spacing: 3px; }
 .nav-sub { font-size: 11px; color: var(--muted); }
 .nav-gh { font-size: 11px; color: var(--red); text-decoration: none; font-weight: 600; }
@@ -1443,6 +1448,10 @@ nav { background: var(--white); border-bottom: 1px solid var(--border); padding:
 .tip-alt a { color: var(--red); text-decoration: none; }
 .about-footer { text-align: center; margin-top: 48px; padding-top: 24px; border-top: 1px solid #2a1010; color: #333; font-size: 10px; letter-spacing: 1px; }
 .about-footer a { color: var(--red); text-decoration: none; }
+
+/* PWA INSTALL BUTTON */
+.btn-pwa-install { width: 100%; background: transparent; border: 1px dashed #ccc; color: var(--muted); border-radius: 6px; padding: 7px 14px; font-size: 10px; font-weight: 600; letter-spacing: 1px; cursor: pointer; margin-top: 6px; }
+.btn-pwa-install:hover { border-color: var(--red); color: var(--red); }
 ```
 
 - [ ] **Step 2: Create `index.html`**
@@ -1465,13 +1474,15 @@ nav { background: var(--white); border-bottom: 1px solid var(--border); padding:
   <meta name="twitter:card" content="summary_large_image">
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Notara","applicationCategory":"MusicApplication","operatingSystem":"Web","url":"https://notara.io","description":"Automatic guitar tab and bass tab transcription from audio. Free and open source.","offers":{"@type":"Offer","price":"0"}}</script>
   <link rel="stylesheet" href="css/main.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#B71C1C">
 </head>
 <body>
 
 <!-- NAV -->
 <nav>
   <div class="logo">
-    <div class="logo-box"></div>
+    <img class="logo-img" src="notara-logo.png" alt="Notara logo">
     <span class="logo-text">NOTARA</span>
   </div>
   <div class="nav-sub">Audio → Guitar Tab</div>
@@ -1634,11 +1645,26 @@ nav { background: var(--white); border-bottom: 1px solid var(--border); padding:
           </div>
         </div>
 
+        <!-- Keys / Keyboard -->
+        <div class="opt-row">
+          <div>
+            <div class="opt-label">Keys / Keyboard</div>
+            <div class="opt-sublabel">MIDI + note list from piano stem</div>
+          </div>
+          <div class="toggle" id="toggle-keys">
+            <div class="toggle-yes" data-val="0">No</div>
+            <div class="toggle-no" data-val="1">Yes</div>
+          </div>
+        </div>
+
       </div>
     </div>
 
     <!-- Transcribe button -->
     <button class="btn-transcribe" id="btn-transcribe" disabled>TRANSCRIBE</button>
+
+    <!-- PWA install prompt (hidden by default, shown when browser fires beforeinstallprompt) -->
+    <button class="btn-pwa-install" id="btn-pwa-install" style="display:none">+ Add to home screen</button>
 
   </div>
 
@@ -1744,20 +1770,26 @@ nav { background: var(--white); border-bottom: 1px solid var(--border); padding:
 </html>
 ```
 
-- [ ] **Step 3: Verify HTML renders correctly**
+- [ ] **Step 3: Copy logo to repo root**
+
+```bash
+cp "logo/notara-logo-simple.png" "notara-logo.png"
+```
+
+- [ ] **Step 4: Verify HTML renders correctly**
 
 Open `index.html` directly in a browser (double-click the file or use `open index.html`). Verify:
-- NAV renders with logo, tagline, GitHub link
-- Left panel shows all options including 7/8-string tuning entries
+- NAV renders with Notara logo PNG, tagline, GitHub link
+- Left panel shows all options including Keys/Keyboard toggle
 - Right panel shows the ♩ empty state
 - About section renders dark with all three paragraphs
 - DONATE button is subtle (grey outline)
 - No JS errors in console (JS files don't exist yet — that's OK for now)
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add index.html css/main.css
+git add index.html css/main.css notara-logo.png
 git commit -m "feat: frontend HTML structure and Warm Ruby CSS"
 ```
 
@@ -1792,7 +1824,8 @@ let currentJobId = null;
 let pollTimer = null;
 let resultsData = null;
 let activeTab = 'guitar1';
-const toggleState = { multi: false, bass: false, vocal: false, drums: false };
+const toggleState = { multi: false, bass: false, vocal: false, drums: false, keys: false };
+let pwaInstallPrompt = null;
 
 // ── DOM refs ─────────────────────────────────────────────────
 const ytInput      = document.getElementById('yt-input');
@@ -1811,6 +1844,25 @@ const tabSwitcher  = document.getElementById('tab-switcher');
 const tabContent   = document.getElementById('tab-content');
 const tabDownloads = document.getElementById('tab-downloads');
 const panelRight   = document.getElementById('panel-right');
+const btnPwaInstall = document.getElementById('btn-pwa-install');
+
+// ── PWA Install ──────────────────────────────────────────────
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  pwaInstallPrompt = e;
+  btnPwaInstall.style.display = 'block';
+});
+btnPwaInstall.addEventListener('click', async () => {
+  if (!pwaInstallPrompt) return;
+  pwaInstallPrompt.prompt();
+  const { outcome } = await pwaInstallPrompt.userChoice;
+  if (outcome === 'accepted') btnPwaInstall.style.display = 'none';
+  pwaInstallPrompt = null;
+});
+window.addEventListener('appinstalled', () => {
+  btnPwaInstall.style.display = 'none';
+  pwaInstallPrompt = null;
+});
 
 // ── YouTube ──────────────────────────────────────────────────
 ytInput.addEventListener('input', () => {
@@ -1872,6 +1924,7 @@ _setupToggle('multi', 'multi');
 _setupToggle('bass', 'bass');
 _setupToggle('vocal', 'vocal');
 _setupToggle('drums', 'drums');
+_setupToggle('keys', 'keys');
 
 // ── Transcribe button ────────────────────────────────────────
 function _updateTranscribeButton() {
@@ -1900,6 +1953,7 @@ async function _submitJob() {
   formData.append('bass_tab', toggleState.bass);
   formData.append('vocal_tab', toggleState.vocal);
   formData.append('drum_summary', toggleState.drums);
+  formData.append('keys_tab', toggleState.keys);
 
   try {
     const resp = await fetch(`${API_BASE_URL}/api/jobs`, { method: 'POST', body: formData });
@@ -2224,23 +2278,52 @@ git commit -m "feat: playback bar + synchronized tab highlight"
 
 ---
 
-## Task 9: SEO assets and GitHub Pages config
+## Task 9: SEO assets, PWA manifest, and GitHub Pages config
 
 **Files:**
+- Create: `manifest.json`
 - Create: `og-image.svg`
 - Create: `sitemap.xml`
 - Create: `robots.txt`
 - Create: `joao.png` (copy from brainstorm content folder)
 - Create: `.nojekyll`
 
-- [ ] **Step 1: Copy the user photo to repo root**
+- [ ] **Step 1: Create `manifest.json`** (PWA manifest — enables "Add to Home Screen")
+
+```json
+{
+  "name": "Notara",
+  "short_name": "Notara",
+  "description": "Audio to Guitar Tab — free, open source, any tuning",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8F4F1",
+  "theme_color": "#B71C1C",
+  "icons": [
+    {
+      "src": "notara-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "notara-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
+```
+
+- [ ] **Step 2: Copy the user photo to repo root**
 
 ```bash
 cp "/Users/joao.silva/Library/CloudStorage/GoogleDrive-davisthe8th@gmail.com/My Drive/GARAGEBAND/VALLETOFNOONE/guitar_tab_pipeline/.superpowers/brainstorm/90654-1785662065/content/joao.png" \
    "/Users/joao.silva/Library/CloudStorage/GoogleDrive-davisthe8th@gmail.com/My Drive/GARAGEBAND/VALLETOFNOONE/guitar_tab_pipeline/joao.png"
 ```
 
-- [ ] **Step 2: Create `og-image.svg`** (1200×630 social preview card)
+- [ ] **Step 3: Create `og-image.svg`** (1200×630 social preview card)
 
 ```svg
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
@@ -2253,7 +2336,7 @@ cp "/Users/joao.silva/Library/CloudStorage/GoogleDrive-davisthe8th@gmail.com/My 
 </svg>
 ```
 
-- [ ] **Step 3: Create `sitemap.xml`**
+- [ ] **Step 4: Create `sitemap.xml`**
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -2267,7 +2350,7 @@ cp "/Users/joao.silva/Library/CloudStorage/GoogleDrive-davisthe8th@gmail.com/My 
 </urlset>
 ```
 
-- [ ] **Step 4: Create `robots.txt`**
+- [ ] **Step 5: Create `robots.txt`**
 
 ```
 User-agent: *
@@ -2275,13 +2358,13 @@ Allow: /
 Sitemap: https://notara.io/sitemap.xml
 ```
 
-- [ ] **Step 5: Create `.nojekyll`** (prevents GitHub Pages from running Jekyll, which would ignore `_` prefixed dirs)
+- [ ] **Step 6: Create `.nojekyll`** (prevents GitHub Pages from running Jekyll, which would ignore `_` prefixed dirs)
 
 ```bash
 touch "/Users/joao.silva/Library/CloudStorage/GoogleDrive-davisthe8th@gmail.com/My Drive/GARAGEBAND/VALLETOFNOONE/guitar_tab_pipeline/.nojekyll"
 ```
 
-- [ ] **Step 6: Enable GitHub Pages on the repo**
+- [ ] **Step 7: Enable GitHub Pages on the repo**
 
 Go to: `https://github.com/joaofmsilva1979/notara/settings/pages`
 - Source: **Deploy from a branch**
@@ -2290,15 +2373,15 @@ Go to: `https://github.com/joaofmsilva1979/notara/settings/pages`
 
 The site will be live at `https://joaofmsilva1979.github.io/notara` within ~2 minutes.
 
-- [ ] **Step 7: Update `js/config.js` with production URL placeholder**
+- [ ] **Step 8: Update `js/config.js` with production URL placeholder**
 
 Replace `api.notara.app` with the Railway/Render subdomain once deployed (Task 10). For now leave as-is.
 
-- [ ] **Step 8: Commit and push**
+- [ ] **Step 9: Commit and push**
 
 ```bash
-git add og-image.svg sitemap.xml robots.txt joao.png .nojekyll
-git commit -m "feat: SEO assets + GitHub Pages config"
+git add manifest.json og-image.svg sitemap.xml robots.txt joao.png .nojekyll
+git commit -m "feat: PWA manifest + SEO assets + GitHub Pages config"
 git push origin main
 ```
 
@@ -2386,6 +2469,197 @@ If Railway gives a 503 (cold start on free tier), wait 30s and try again — fre
 
 ---
 
+## Task 11: Keyboard / Keys MIDI detector
+
+**Files:**
+- Create: `pipeline/piano_tab.py`
+- Create: `tests/test_piano_tab.py`
+
+Transcribes the Demucs piano stem (htdemucs_6s outputs a dedicated `piano.wav`) via basic-pitch. Outputs MIDI + a simplified ASCII note list (pitch name + timing). This stem already exists when Demucs separates the audio — no extra separation step needed.
+
+- [ ] **Step 1: Write the failing tests**
+
+```python
+# tests/test_piano_tab.py
+
+import pytest
+from pathlib import Path
+from unittest.mock import patch, MagicMock
+from pipeline.piano_tab import render_piano_tab, _notes_to_midi, _notes_to_text
+
+
+FAKE_NOTES = [
+    MagicMock(pitch=60, start=0.0, end=0.5, velocity=80),   # C4
+    MagicMock(pitch=64, start=0.5, end=1.0, velocity=75),   # E4
+    MagicMock(pitch=67, start=1.0, end=1.5, velocity=70),   # G4
+    MagicMock(pitch=72, start=2.0, end=2.5, velocity=60),   # C5
+]
+
+
+def test_notes_to_text_returns_string():
+    result = _notes_to_text(FAKE_NOTES, bars=4, tempo=120.0)
+    assert isinstance(result, str)
+    assert len(result) > 0
+
+
+def test_notes_to_text_contains_note_names():
+    result = _notes_to_text(FAKE_NOTES, bars=4, tempo=120.0)
+    assert "C4" in result or "C5" in result or "E4" in result
+
+
+def test_notes_to_midi_returns_bytes():
+    result = _notes_to_midi(FAKE_NOTES, tempo=120.0)
+    assert isinstance(result, bytes)
+    assert result[:4] == b"MThd"  # MIDI file magic bytes
+
+
+def test_render_piano_tab_no_stem_returns_none(tmp_path):
+    missing = tmp_path / "nonexistent.wav"
+    result = render_piano_tab(missing, bars=32, key_est="C major", tempo=120.0, source_name="test")
+    assert result is None
+
+
+@patch("pipeline.piano_tab.run_basic_pitch")
+def test_render_piano_tab_returns_dict(mock_bp, tmp_path):
+    stem = tmp_path / "piano.wav"
+    stem.write_bytes(b"\x00" * 100)
+    mock_bp.return_value = FAKE_NOTES
+    result = render_piano_tab(stem, bars=32, key_est="C major", tempo=120.0, source_name="piano")
+    assert result is not None
+    assert "text" in result
+    assert "midi_bytes" in result
+    assert isinstance(result["text"], str)
+    assert isinstance(result["midi_bytes"], bytes)
+```
+
+- [ ] **Step 2: Run tests to verify they fail**
+
+```bash
+pytest tests/test_piano_tab.py -v
+```
+
+Expected: `ModuleNotFoundError` or `ImportError` — piano_tab.py doesn't exist yet.
+
+- [ ] **Step 3: Create `pipeline/piano_tab.py`**
+
+```python
+from __future__ import annotations
+
+import io
+from pathlib import Path
+from typing import Optional
+
+try:
+    import mido
+    _HAS_MIDO = True
+except ImportError:
+    _HAS_MIDO = False
+
+from pipeline.transcription import run_basic_pitch
+
+_MIDI_NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+
+
+def _pitch_name(midi_note: int) -> str:
+    octave = (midi_note // 12) - 1
+    name = _MIDI_NOTE_NAMES[midi_note % 12]
+    return f"{name}{octave}"
+
+
+def _notes_to_text(notes: list, bars: int, tempo: float) -> str:
+    seconds_per_beat = 60.0 / tempo
+    seconds_per_bar = seconds_per_beat * 4
+    total_duration = bars * seconds_per_bar
+
+    lines = [f"Keys — {len(notes)} notes detected — tempo: {tempo:.0f} BPM"]
+    lines.append("-" * 48)
+    for note in sorted(notes, key=lambda n: n.start):
+        bar = int(note.start / seconds_per_bar) + 1
+        beat = ((note.start % seconds_per_bar) / seconds_per_beat) + 1
+        dur = note.end - note.start
+        lines.append(f"  Bar {bar:>3}  Beat {beat:.1f}  {_pitch_name(note.pitch):<4}  ({dur:.2f}s)")
+    return "\n".join(lines)
+
+
+def _notes_to_midi(notes: list, tempo: float) -> bytes:
+    if not _HAS_MIDO:
+        return b""
+
+    mid = mido.MidiFile(type=0)
+    track = mido.MidiTrack()
+    mid.tracks.append(track)
+    track.append(mido.MetaMessage("set_tempo", tempo=mido.bpm2tempo(tempo), time=0))
+
+    ticks_per_beat = mid.ticks_per_beat
+    seconds_per_tick = 60.0 / (tempo * ticks_per_beat)
+
+    events: list[tuple[float, str, int]] = []
+    for note in notes:
+        events.append((note.start, "note_on", note.pitch))
+        events.append((note.end, "note_off", note.pitch))
+
+    events.sort(key=lambda e: e[0])
+    last_time = 0.0
+    for abs_time, msg_type, pitch in events:
+        delta_s = abs_time - last_time
+        delta_ticks = int(delta_s / seconds_per_tick)
+        track.append(mido.Message(msg_type, note=pitch, velocity=64, time=delta_ticks))
+        last_time = abs_time
+
+    buf = io.BytesIO()
+    mid.save(file=buf)
+    return buf.getvalue()
+
+
+def render_piano_tab(
+    piano_stem_path: Path,
+    bars: int,
+    key_est: str,
+    tempo: float,
+    source_name: str,
+) -> Optional[dict]:
+    """Return {'text': str, 'midi_bytes': bytes} or None if stem missing."""
+    if not piano_stem_path.exists():
+        return None
+
+    notes = run_basic_pitch(piano_stem_path)
+    if not notes:
+        return None
+
+    return {
+        "text": _notes_to_text(notes, bars=bars, tempo=tempo),
+        "midi_bytes": _notes_to_midi(notes, tempo=tempo),
+    }
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+```bash
+pytest tests/test_piano_tab.py -v
+```
+
+Expected: 5 tests PASS.
+
+- [ ] **Step 5: Install mido if not already present**
+
+Check `requirements.txt`. If `mido` is missing, add it:
+
+```bash
+grep mido requirements.txt || echo "mido" >> requirements.txt
+pip install mido
+```
+
+Re-run tests — they should still pass.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add pipeline/piano_tab.py tests/test_piano_tab.py requirements.txt
+git commit -m "feat: add keyboard/piano MIDI detector (piano_tab.py)"
+```
+
+---
+
 ## Self-Review
 
 **Spec coverage check:**
@@ -2395,22 +2669,26 @@ If Railway gives a 503 (cold start on free tier), wait 30s and try again — fre
 | Full tuning list (15 new) | Task 1 |
 | vocal_tab.py module | Task 2 |
 | drum_summary.py module | Task 3 |
+| piano_tab.py keyboard/MIDI detector | Task 11 |
 | FastAPI backend, async jobs, 1hr TTL | Task 4–5 |
 | POST /api/jobs, GET status/results/audio/download | Task 5 |
 | YouTube URL via yt-dlp | Task 5 (worker) |
 | GitHub Pages frontend, zero framework | Task 6–8 |
 | Warm Ruby palette | Task 6 |
+| Logo PNG in nav | Task 6 |
 | Responsive ≥769px split / ≤768px stacked | Task 6 |
 | YouTube input + file dropzone | Task 6–7 |
-| All option toggles | Task 6–7 |
+| All option toggles (incl. Keys) | Task 6–7 |
+| PWA install button | Task 7 |
 | Progress checklist (dynamic steps) | Task 7 |
 | Playback bar + chord display | Task 8 |
 | Synchronized tab highlight | Task 8 |
-| Tab switcher (Guitar1/2/Bass/Vocals/Drums) | Task 7 |
+| Tab switcher (Guitar1/2/Bass/Vocals/Drums/Keys) | Task 7 |
 | PDF/TXT/MIDI downloads | Task 7 |
 | About section with photo | Task 6 |
 | DONATE button (Ko-fi + PayPal) | Task 6 |
 | SEO meta tags, OG, Schema.org | Task 6 (index.html head) |
+| manifest.json (PWA) | Task 9 |
 | sitemap.xml, robots.txt | Task 9 |
 | og-image.svg | Task 9 |
 | GitHub Pages deploy | Task 9 |
@@ -2418,4 +2696,4 @@ If Railway gives a 503 (cold start on free tier), wait 30s and try again — fre
 
 All spec requirements covered. No placeholders found.
 
-**Note on joao.png:** The About section references `joao.png` at the repo root. The file exists at `.superpowers/brainstorm/.../content/joao.png` (local only). Task 9 Step 1 copies it to the repo root and commits it. If the owner prefers not to commit a photo to a public repo, replace the `<img src="joao.png">` in index.html with a base64 data URI.
+**Note on joao.png:** The About section references `joao.png` at the repo root. The file exists at `.superpowers/brainstorm/.../content/joao.png` (local only). Task 9 Step 2 copies it to the repo root and commits it. If the owner prefers not to commit a photo to a public repo, replace the `<img src="joao.png">` in index.html with a base64 data URI.
