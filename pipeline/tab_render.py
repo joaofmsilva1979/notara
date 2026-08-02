@@ -29,19 +29,19 @@ COLUMNS_PER_BAR = 16
 CELL_WIDTH = 3
 
 
-def _new_bar_grid() -> List[List[str]]:
-    return [["-"] * COLUMNS_PER_BAR for _ in range(6)]
+def _new_bar_grid(n_strings: int) -> List[List[str]]:
+    return [["-"] * COLUMNS_PER_BAR for _ in range(n_strings)]
 
 
-def _place_note(grid: List[List[str]], note: FrettedNote, bar: ChordSegment) -> None:
+def _place_note(grid: List[List[str]], note: FrettedNote, bar: ChordSegment,
+                n_strings: int) -> None:
     bar_len = bar.end - bar.start
     if bar_len <= 0:
         col = 0
     else:
         col = int(round((note.start - bar.start) / bar_len * COLUMNS_PER_BAR))
         col = max(0, min(COLUMNS_PER_BAR - 1, col))
-    # display rows: row 0 = high e (string index 5) ... row 5 = low E (string index 0)
-    row = 5 - note.string
+    row = (n_strings - 1) - note.string
     grid[row][col] = str(note.fret)
 
 
@@ -50,6 +50,7 @@ def render_tab(bars: List[ChordSegment], notes: List[FrettedNote],
                source_name: str, tuning: Tuning = None, bars_per_line: int = 4) -> str:
     if tuning is None:
         tuning = find_tuning(STANDARD_E_A_D_G_B_E)
+    n_strings = len(tuning.string_names)
     out = []
     out.append(f"# Tab generated from: {source_name}")
     out.append(f"# Estimated key: {key_estimate}  (correlation={key_estimate.correlation:.2f})")
@@ -63,7 +64,6 @@ def render_tab(bars: List[ChordSegment], notes: List[FrettedNote],
     notes_by_bar: List[List[FrettedNote]] = [[] for _ in bars]
     bar_starts = [b.start for b in bars]
     for note in notes:
-        # find the bar this note's onset falls into
         idx = None
         for i, b in enumerate(bars):
             if b.start <= note.start < b.end:
@@ -85,13 +85,13 @@ def render_tab(bars: List[ChordSegment], notes: List[FrettedNote],
 
         grids = []
         for i, bar in enumerate(chunk):
-            grid = _new_bar_grid()
+            grid = _new_bar_grid(n_strings)
             for note in notes_by_bar[line_start + i]:
-                _place_note(grid, note, bar)
+                _place_note(grid, note, bar, n_strings)
             grids.append(grid)
 
-        for row_idx in range(6):
-            row_str = tuning.string_names[5 - row_idx] + "|"
+        for row_idx in range(n_strings):
+            row_str = tuning.string_names[(n_strings - 1) - row_idx] + "|"
             for grid in grids:
                 cells = [cell.ljust(CELL_WIDTH, "-") for cell in grid[row_idx]]
                 row_str += "".join(cells) + "|"
