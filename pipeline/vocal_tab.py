@@ -16,7 +16,7 @@ Known limitations:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 
@@ -25,7 +25,7 @@ from .fretboard import map_notes_to_fretboard
 from .key_detection import KeyEstimate
 from .tab_render import render_tab
 from .transcription import Note, transcribe
-from .tuning import STANDARD_E_A_D_G_B_E, find_tuning
+from .tuning import STANDARD_E_A_D_G_B_E, Tuning, find_tuning
 
 GUITAR_RANGE_MIDPOINT = 60  # MIDI middle C; median above this triggers octave shift
 OCTAVE_SEMITONES = 12
@@ -65,6 +65,7 @@ def render_vocal_tab(
     key_estimate: KeyEstimate,
     tempo: float,
     source_name: str,
+    tuning: Optional[Tuning] = None,
 ) -> str:
     """Transcribe the vocal stem and render it as ASCII guitar tab.
 
@@ -72,7 +73,8 @@ def render_vocal_tab(
     to fit standard guitar range, and a ``# Transposed: -1 octave`` comment
     is injected into the tab header immediately after the tuning line.
     """
-    tuning = find_tuning(STANDARD_E_A_D_G_B_E)
+    if tuning is None:
+        tuning = find_tuning(STANDARD_E_A_D_G_B_E)
     notes, transposed = transcribe_vocal_melody(vocal_stem_path)
     fretted = map_notes_to_fretboard(notes, tuning)
     tab = render_tab(bars, fretted, key_estimate, tempo, source_name, tuning)
@@ -80,5 +82,6 @@ def render_vocal_tab(
         tab = tab.replace(
             f"# Tuning: {tuning.name}",
             f"# Tuning: {tuning.name}\n# Transposed: -1 octave to fit guitar range",
+            1,  # replace only first occurrence
         )
     return tab

@@ -69,3 +69,9 @@ def test_render_vocal_tab_no_transpose_comment_when_not_transposed():
             Path("fake.wav"), _make_bars(), _make_key(), 120.0, "test.wav"
         )
     assert "Transposed" not in result
+
+
+def test_should_not_transpose_at_boundary():
+    """median == 60 is not > 60, so no transpose."""
+    notes = _make_notes([60, 60, 60, 60, 60])
+    assert vocal_tab._should_transpose(notes) is False
