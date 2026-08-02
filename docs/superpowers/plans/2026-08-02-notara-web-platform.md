@@ -1140,6 +1140,11 @@ def run_job(job_id: str, params: Dict[str, Any]) -> None:
         step += 1
         _step(job, step, "Mapping to fretboard + rendering tab")
         fretted1 = fretboard.map_notes_to_fretboard(notes1, guitar_tuning)
+        # bars_per_line=1 for web display (bar-sync highlight requires one block per bar)
+        tab1_web = tab_render.render_tab(
+            bars, fretted1, key_est, tempo, audio_path.name, guitar_tuning, bars_per_line=1
+        )
+        # bars_per_line=4 for file download (traditional format)
         tab1 = tab_render.render_tab(
             bars, fretted1, key_est, tempo, audio_path.name, guitar_tuning
         )
@@ -1151,7 +1156,7 @@ def run_job(job_id: str, params: Dict[str, Any]) -> None:
         export_midi(work_dir / "guitar1.midi", fretted1, tempo)
 
         results: Dict[str, Any] = {
-            "tabs": {"guitar1": tab1},
+            "tabs": {"guitar1": tab1_web},
             "key": str(key_est),
             "tempo": round(tempo, 1),
             "tuning": guitar_tuning.name,
@@ -1168,6 +1173,9 @@ def run_job(job_id: str, params: Dict[str, Any]) -> None:
             _step(job, step, "Transcribing Guitar 2")
             notes2 = transcription.transcribe(guitar2_path)
             fretted2 = fretboard.map_notes_to_fretboard(notes2, guitar_tuning)
+            tab2_web = tab_render.render_tab(
+                bars, fretted2, key_est, tempo, audio_path.name, guitar_tuning, bars_per_line=1
+            )
             tab2 = tab_render.render_tab(
                 bars, fretted2, key_est, tempo, audio_path.name, guitar_tuning
             )
@@ -1177,7 +1185,7 @@ def run_job(job_id: str, params: Dict[str, Any]) -> None:
                 audio_path.name, guitar_tuning
             )
             export_midi(work_dir / "guitar2.midi", fretted2, tempo)
-            results["tabs"]["guitar2"] = tab2
+            results["tabs"]["guitar2"] = tab2_web
 
         # Optional: Bass tab
         if params["bass_tab"]:
@@ -1186,6 +1194,9 @@ def run_job(job_id: str, params: Dict[str, Any]) -> None:
             bass_tuning = tuning_mod.find_tuning(tuning_mod.BASS_STANDARD_EADG)
             bass_notes = transcription.transcribe(bass_path)
             bass_fretted = fretboard.map_notes_to_fretboard(bass_notes, bass_tuning)
+            bass_tab_web = tab_render.render_tab(
+                bars, bass_fretted, key_est, tempo, audio_path.name, bass_tuning, bars_per_line=1
+            )
             bass_tab_text = tab_render.render_tab(
                 bars, bass_fretted, key_est, tempo, audio_path.name, bass_tuning
             )
@@ -1194,7 +1205,7 @@ def run_job(job_id: str, params: Dict[str, Any]) -> None:
                 work_dir / "bass.pdf", bars, bass_fretted, key_est, tempo,
                 audio_path.name, bass_tuning
             )
-            results["tabs"]["bass"] = bass_tab_text
+            results["tabs"]["bass"] = bass_tab_web
 
         # Optional: Vocal melody
         if params["vocal_tab"]:
@@ -1203,11 +1214,15 @@ def run_job(job_id: str, params: Dict[str, Any]) -> None:
             stem_dir = work_dir / "stems" / DEMUCS_MODEL / audio_path.stem
             vocal_path = stem_dir / "vocals.wav"
             if vocal_path.exists():
+                # bars_per_line=1 for web display sync; default (4) for file download
+                vocal_text_web = vocal_tab_mod.render_vocal_tab(
+                    vocal_path, bars, key_est, tempo, audio_path.name, bars_per_line=1
+                )
                 vocal_text = vocal_tab_mod.render_vocal_tab(
                     vocal_path, bars, key_est, tempo, audio_path.name
                 )
                 (work_dir / "vocals.txt").write_text(vocal_text, encoding="utf-8")
-                results["tabs"]["vocals"] = vocal_text
+                results["tabs"]["vocals"] = vocal_text_web
 
         # Optional: Drum summary
         if params["drum_summary"]:
@@ -2071,12 +2086,32 @@ function _switchTab(track, allTracks) {
 function _renderTab(track, data) {
   const text = data.tabs[track] || '';
   tabContent.innerHTML = '';
-  text.split('\n').forEach(line => {
-    const span = document.createElement('span');
-    span.className = line.startsWith('#') ? 'tab-comment' : 'tab-bar';
-    span.textContent = line;
-    tabContent.appendChild(span);
-    tabContent.appendChild(document.createTextNode('\n'));
+
+  // Split into header comment lines and bar blocks.
+  // The API returns tabs with bars_per_line=1 so bars are separated by blank lines.
+  // Header comment lines (starting with #) come first, then bar blocks.
+  const segments = text.split('\n\n');
+  segments.forEach(segment => {
+    if (!segment.trim()) return;
+    // Each segment is either a header block (all # lines) or a bar block
+    const isComment = segment.trim().split('\n').every(l => l.startsWith('#') || l.trim() === '');
+    if (isComment) {
+      segment.split('\n').forEach(line => {
+        if (!line.trim()) return;
+        const span = document.createElement('span');
+        span.className = 'tab-comment';
+        span.textContent = line;
+        tabContent.appendChild(span);
+        tabContent.appendChild(document.createTextNode('\n'));
+      });
+    } else {
+      // One bar block: chord label + 6 string rows — render as single .tab-bar span
+      const span = document.createElement('span');
+      span.className = 'tab-bar';
+      span.textContent = segment;
+      tabContent.appendChild(span);
+      tabContent.appendChild(document.createTextNode('\n\n'));
+    }
   });
 
   // Downloads
