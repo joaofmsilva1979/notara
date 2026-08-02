@@ -171,7 +171,24 @@ Dark background (`#1A0808`), positioned below the tool, reachable by scrolling.
 - Photo (circular, 160px, ruby border, slight contrast boost) + name + role — left on desktop, centered above text on mobile
 - Three paragraphs tagged **— Why / — How / — What** (Simon Sinek order)
 - Privacy notice with lock icon: "Nothing is saved. Your audio is processed and immediately discarded. No account, no tracking, no storage."
+- **Tip jar** — between the privacy notice and the footer (see below)
 - Footer: "NOTARA · 2026 · Made with stubbornness and ♥ · Built with Claude"
+
+### Tip Jar
+
+Pay-what-you-want, zero pressure. Inspired by Radiohead's "In Rainbows" model.
+
+**Platform:** Ko-fi (`ko-fi.com/joaosilva` — owner to confirm exact handle at setup)  
+**Fallback:** PayPal.me link in small text below the button
+
+**Copy:**
+> *"Notara is free. No catch, no account, no ads. If it saved you an hour of ear training and you feel like it — buy me a coffee. If not, no worries. Go play."*
+
+**Visual:**
+- Ko-fi button: warm ruby outline style (`☕ Buy me a coffee`), centered
+- Below in small muted text: `or via PayPal · paypal.me/joaosilva`
+- Both links open in `target="_blank"`
+- Positioned between the privacy notice and the footer rule — part of the dark `#1A0808` section
 
 **Copy (draft — owner to edit freely):**
 
