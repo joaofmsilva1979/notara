@@ -110,6 +110,8 @@ On mobile the "right panel" (results) is hidden until processing completes, then
 
 **Drum summary** — Yes / No toggle (default: No). Outputs a rhythmic pattern summary and ASCII groove map of the drum stem (kick, snare, hi-hat). Does not produce a traditional tab — produces a readable rhythm chart.
 
+**Keyboard / Keys** — Yes / No toggle (default: No). Transcribes the Demucs piano stem (htdemucs_6s separates a dedicated piano stem). Outputs notes as a MIDI file + a simplified note list (pitch + timing). Useful for identifying synth riffs, piano chords, or any keyboard arrangement in the mix. Shows as "Keys" tab in the results panel.
+
 ### 4. TRANSCRIBE button
 - Disabled until a file or YouTube URL is provided
 - On click: submits job, transitions right panel to progress view
