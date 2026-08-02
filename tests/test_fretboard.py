@@ -24,3 +24,44 @@ def test_low_note_is_fretted_under_drop_d_tuning():
     assert len(fretted) == 1
     assert fretted[0].string == 0
     assert fretted[0].fret == 0
+
+
+def test_position_window_keeps_sequential_notes_in_same_region():
+    """After a high-fret note shifts the window up, subsequent notes should
+    prefer frets within that region rather than jumping back to the lowest
+    available fret."""
+    tuning = find_tuning(STANDARD_E_A_D_G_B_E)
+    # MIDI 76 = E5: only playable at fret 12, string 5 (e4) within MAX_FRET=15.
+    # This shifts the position window to [10, 14].
+    # MIDI 62 = D4: options are (string4, fret3), (string3, fret7), (string2, fret12).
+    # Without window: greedy picks fret 3 on string 4 (lowest fret, string 4 is free).
+    # With window [10,14]: fret 3 is out of window, fret 7 is out of window,
+    #   fret 12 on string 2 IS in window — so window implementation picks fret 12.
+    notes = [
+        _note(76, start=0.0),  # E5 — forces window to frets 10-14
+        _note(62, start=0.1),  # D4 — should land on fret 12 (in-window), not fret 3 (greedy)
+    ]
+    fretted = map_notes_to_fretboard(notes, tuning)
+    assert len(fretted) == 2
+    d4_note = [fn for fn in fretted if fn.pitch == 62][0]
+    # Without window: greedy picks fret 3 on string 4 (lowest available fret)
+    # With window shifted to ~[10,14]: should pick fret 12 on string 2 instead
+    assert d4_note.fret >= 10, (
+        f"Expected fret >= 10 for D4 after window shift to [10,14], got fret {d4_note.fret}"
+    )
+
+
+def test_open_strings_always_allowed_regardless_of_window():
+    """Open strings (fret 0) are always valid even after window has shifted up."""
+    tuning = find_tuning(STANDARD_E_A_D_G_B_E)
+    # MIDI 76 = E5 at fret 12, string 5 — shifts window up to [10, 14]
+    # MIDI 40 = E2 — only playable at fret 0, string 0 (open low E)
+    # Even though fret 0 is outside the shifted window, it must still be allowed.
+    notes = [
+        _note(76, start=0.0),  # shifts window up
+        _note(40, start=0.1),  # only playable at fret 0, string 0
+    ]
+    fretted = map_notes_to_fretboard(notes, tuning)
+    open_e = [fn for fn in fretted if fn.pitch == 40]
+    assert len(open_e) == 1
+    assert open_e[0].fret == 0

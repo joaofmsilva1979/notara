@@ -33,6 +33,7 @@ from .transcription import Note
 from .tuning import MAX_FRET, STANDARD_E_A_D_G_B_E, Tuning, find_tuning
 
 CHORD_TOLERANCE = 0.05  # seconds; notes starting within this window are one "grasp"
+POSITION_SPAN = 4  # fret span of one neck position (e.g. frets 5–9)
 
 
 @dataclass
@@ -69,23 +70,43 @@ def map_notes_to_fretboard(notes: List[Note], tuning: Optional[Tuning] = None) -
     if tuning is None:
         tuning = find_tuning(STANDARD_E_A_D_G_B_E)
     fretted: List[FrettedNote] = []
+    position_start = 0  # left edge of the current 4-fret position window
+
     for group in _group_by_onset(notes):
-        used_strings = set()
+        used_strings: set = set()
         # Assign highest pitches first: they have fewer valid strings/frets,
         # so giving them first pick reduces collisions.
         for note in sorted(group, key=lambda n: -n.pitch):
             chosen: Optional[tuple] = None
+
+            # First pass: prefer frets within the current window, or open strings
             for string_idx, fret in _fret_options(note.pitch, tuning):
                 if string_idx not in used_strings:
-                    chosen = (string_idx, fret)
-                    break
+                    if fret == 0 or position_start <= fret <= position_start + POSITION_SPAN:
+                        chosen = (string_idx, fret)
+                        break
+
+            # Second pass: fall back to lowest available fret on any free string
+            if chosen is None:
+                for string_idx, fret in _fret_options(note.pitch, tuning):
+                    if string_idx not in used_strings:
+                        chosen = (string_idx, fret)
+                        break
+
             if chosen is None:
                 continue  # out of range or no free string left; note dropped
+
             string_idx, fret = chosen
             used_strings.add(string_idx)
+
+            # Shift window when a non-open fret lands outside it
+            if fret > 0 and not (position_start <= fret <= position_start + POSITION_SPAN):
+                position_start = max(0, fret - 2)
+
             fretted.append(FrettedNote(
                 string=string_idx, fret=fret,
                 start=note.start, end=note.end, pitch=note.pitch,
             ))
+
     fretted.sort(key=lambda fn: fn.start)
     return fretted
