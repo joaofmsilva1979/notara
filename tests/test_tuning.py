@@ -15,10 +15,8 @@ from pipeline.tuning import (
     BASS_DROP_D,
     BASS_5_STRING_BEADG,
 )
+import pipeline.tuning as tuning
 
-
-def test_guitar_tunings_catalog_still_has_seven_entries():
-    assert len(TUNINGS) == 7
 
 
 def test_find_tuning_returns_standard():
@@ -126,3 +124,46 @@ def test_suggest_alternate_tuning_never_suggests_bass_for_guitar_notes():
     suggestion = suggest_alternate_tuning(notes, standard)
     if suggestion is not None:
         assert suggestion.suggested.name not in (BASS_STANDARD_EADG, BASS_DROP_D, BASS_5_STRING_BEADG)
+
+
+def test_new_six_string_tunings_are_in_tunings_list():
+    names = [t.name for t in tuning.TUNINGS]
+    for expected in [
+        "C# Standard", "C Standard", "Drop C", "Drop B", "Drop A",
+        "Open E", "Open A", "Open C", "DADGAD", "Baritone B", "Baritone A",
+    ]:
+        assert expected in names, f"{expected} missing from TUNINGS"
+
+
+def test_extended_tunings_exist():
+    names = [t.name for t in tuning.EXTENDED_TUNINGS]
+    for expected in [
+        "7-String Standard", "7-String Drop A",
+        "8-String Standard", "8-String Drop E",
+    ]:
+        assert expected in names, f"{expected} missing from EXTENDED_TUNINGS"
+
+
+def test_find_tuning_finds_all_new_tunings():
+    for name in [
+        "C# Standard", "C Standard", "Drop C", "Drop B", "Drop A",
+        "Open E", "Open A", "Open C", "DADGAD", "Baritone B", "Baritone A",
+        "7-String Standard", "7-String Drop A",
+        "8-String Standard", "8-String Drop E",
+    ]:
+        result = tuning.find_tuning(name)
+        assert result.name == name
+
+
+def test_suggest_alternate_tuning_never_returns_extended():
+    """7/8-string tunings must never be suggested for 6-string input."""
+    from pipeline.transcription import Note
+    notes = [Note(pitch=33, start=i * 0.5, end=i * 0.5 + 0.4, velocity=0.8) for i in range(10)]
+    std = tuning.find_tuning(tuning.STANDARD_E_A_D_G_B_E)
+    suggestion = tuning.suggest_alternate_tuning(notes, std)
+    if suggestion is not None:
+        assert suggestion.suggested.name not in [t.name for t in tuning.EXTENDED_TUNINGS]
+
+
+def test_guitar_tunings_catalog_is_eighteen_entries():
+    assert len(tuning.TUNINGS) == 18  # 7 original + 11 new

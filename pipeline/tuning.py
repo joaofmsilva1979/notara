@@ -28,6 +28,23 @@ BASS_STANDARD_EADG = "Bass Standard EADG"
 BASS_DROP_D = "Bass Drop D"
 BASS_5_STRING_BEADG = "Bass 5-String BEADG"
 
+C_SHARP_STANDARD = "C# Standard"
+C_STANDARD = "C Standard"
+DROP_C = "Drop C"
+DROP_B = "Drop B"
+DROP_A_SIX = "Drop A"
+OPEN_E = "Open E"
+OPEN_A = "Open A"
+OPEN_C = "Open C"
+DADGAD = "DADGAD"
+BARITONE_B = "Baritone B"
+BARITONE_A = "Baritone A"
+
+SEVEN_STRING_STANDARD = "7-String Standard"
+SEVEN_STRING_DROP_A = "7-String Drop A"
+EIGHT_STRING_STANDARD = "8-String Standard"
+EIGHT_STRING_DROP_E = "8-String Drop E"
+
 
 @dataclass(frozen=True)
 class Tuning:
@@ -38,12 +55,31 @@ class Tuning:
 
 TUNINGS: List[Tuning] = [
     Tuning(STANDARD_E_A_D_G_B_E, [40, 45, 50, 55, 59, 64], ["E", "A", "D", "G", "B", "e"]),
-    Tuning(DROP_D, [38, 45, 50, 55, 59, 64], ["D", "A", "D", "G", "B", "e"]),
-    Tuning(EB_STANDARD, [39, 44, 49, 54, 58, 63], ["Eb", "Ab", "Db", "Gb", "Bb", "eb"]),
-    Tuning(D_STANDARD, [38, 43, 48, 53, 57, 62], ["D", "G", "C", "F", "A", "d"]),
-    Tuning(DROP_C_SHARP, [37, 44, 49, 54, 58, 63], ["C#", "Ab", "Db", "Gb", "Bb", "eb"]),
-    Tuning(OPEN_G, [38, 43, 50, 55, 59, 62], ["D", "G", "D", "G", "B", "d"]),
-    Tuning(OPEN_D, [38, 45, 50, 54, 57, 62], ["D", "A", "D", "F#", "A", "d"]),
+    Tuning(DROP_D,               [38, 45, 50, 55, 59, 64], ["D", "A", "D", "G", "B", "e"]),
+    Tuning(EB_STANDARD,          [39, 44, 49, 54, 58, 63], ["Eb", "Ab", "Db", "Gb", "Bb", "eb"]),
+    Tuning(D_STANDARD,           [38, 43, 48, 53, 57, 62], ["D", "G", "C", "F", "A", "d"]),
+    Tuning(DROP_C_SHARP,         [37, 44, 49, 54, 58, 63], ["C#", "Ab", "Db", "Gb", "Bb", "eb"]),
+    Tuning(OPEN_G,               [38, 43, 50, 55, 59, 62], ["D", "G", "D", "G", "B", "d"]),
+    Tuning(OPEN_D,               [38, 45, 50, 54, 57, 62], ["D", "A", "D", "F#", "A", "d"]),
+    # New 6-string tunings
+    Tuning(C_SHARP_STANDARD,     [37, 42, 47, 52, 56, 61], ["C#", "F#", "B", "E", "G#", "c#"]),
+    Tuning(C_STANDARD,           [36, 41, 46, 51, 55, 60], ["C", "F", "Bb", "Eb", "G", "c"]),
+    Tuning(DROP_C,               [36, 43, 48, 53, 57, 62], ["C", "G", "C", "F", "A", "d"]),
+    Tuning(DROP_B,               [35, 42, 47, 52, 56, 61], ["B", "F#", "B", "E", "G#", "c#"]),
+    Tuning(DROP_A_SIX,           [33, 40, 45, 50, 54, 59], ["A", "E", "A", "D", "F#", "b"]),
+    Tuning(OPEN_E,               [40, 47, 52, 56, 59, 64], ["E", "B", "E", "G#", "B", "e"]),
+    Tuning(OPEN_A,               [40, 45, 52, 57, 61, 64], ["E", "A", "E", "A", "C#", "e"]),
+    Tuning(OPEN_C,               [36, 43, 48, 55, 60, 64], ["C", "G", "C", "G", "C", "e"]),
+    Tuning(DADGAD,               [38, 45, 50, 55, 57, 62], ["D", "A", "D", "G", "A", "d"]),
+    Tuning(BARITONE_B,           [35, 40, 45, 50, 54, 59], ["B", "E", "A", "D", "F#", "b"]),
+    Tuning(BARITONE_A,           [33, 38, 43, 48, 52, 57], ["A", "D", "G", "C", "E", "a"]),
+]
+
+EXTENDED_TUNINGS: List[Tuning] = [
+    Tuning(SEVEN_STRING_STANDARD, [35, 40, 45, 50, 55, 59, 64], ["B", "E", "A", "D", "G", "B", "e"]),
+    Tuning(SEVEN_STRING_DROP_A,   [33, 40, 45, 50, 55, 59, 64], ["A", "E", "A", "D", "G", "B", "e"]),
+    Tuning(EIGHT_STRING_STANDARD, [30, 35, 40, 45, 50, 55, 59, 64], ["F#", "B", "E", "A", "D", "G", "B", "e"]),
+    Tuning(EIGHT_STRING_DROP_E,   [28, 35, 40, 45, 50, 55, 59, 64], ["E", "B", "E", "A", "D", "G", "B", "e"]),
 ]
 
 
@@ -57,7 +93,7 @@ BASS_TUNINGS: List[Tuning] = [
 
 
 def find_tuning(name: str) -> Tuning:
-    for tuning in TUNINGS + BASS_TUNINGS:
+    for tuning in TUNINGS + BASS_TUNINGS + EXTENDED_TUNINGS:
         if tuning.name == name:
             return tuning
     raise ValueError(f"Unknown tuning: {name!r}")
