@@ -169,3 +169,39 @@ def test_smooth_labels_never_overwrites_a_genuinely_silent_bar():
         BarResult(label="C", score=1.0, root_forced=False, chroma=c_template),
     ]
     assert _smooth_labels(bars) == ["C", "N.C.", "C"]
+
+
+# ---------------------------------------------------------------------------
+# Extended chord vocabulary: sus2, sus4, dim
+# ---------------------------------------------------------------------------
+
+def _chroma_for_intervals(root: int, intervals: list) -> np.ndarray:
+    """Synthetic chroma vector with energy only on the given intervals from root."""
+    vec = np.zeros(12)
+    for i in intervals:
+        vec[(root + i) % 12] = 1.0
+    return vec
+
+
+def test_best_chord_detects_sus4():
+    # E sus4 = E (0), A (5), B (7) from root E=4
+    chroma = _chroma_for_intervals(4, [0, 5, 7])
+    label, score = _best_chord(chroma)
+    assert label == "Esus4"
+    assert score > 0.8
+
+
+def test_best_chord_detects_dim():
+    # A dim = A (0), C (3), Eb (6) from root A=9
+    chroma = _chroma_for_intervals(9, [0, 3, 6])
+    label, score = _best_chord(chroma)
+    assert label == "Adim"
+    assert score > 0.8
+
+
+def test_best_chord_detects_sus2():
+    # D sus2 = D (0), E (2), A (7) from root D=2
+    chroma = _chroma_for_intervals(2, [0, 2, 7])
+    label, score = _best_chord(chroma)
+    assert label == "Dsus2"
+    assert score > 0.8
