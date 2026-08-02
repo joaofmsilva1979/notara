@@ -24,6 +24,9 @@ D_STANDARD = "D Standard"
 DROP_C_SHARP = "Drop C#"
 OPEN_G = "Open G"
 OPEN_D = "Open D"
+BASS_STANDARD_EADG = "Bass Standard EADG"
+BASS_DROP_D = "Bass Drop D"
+BASS_5_STRING_BEADG = "Bass 5-String BEADG"
 
 
 @dataclass(frozen=True)
@@ -44,8 +47,17 @@ TUNINGS: List[Tuning] = [
 ]
 
 
+# Bass tunings kept separate so suggest_alternate_tuning never proposes a
+# bass tuning as an alternative for a guitar track.
+BASS_TUNINGS: List[Tuning] = [
+    Tuning(BASS_STANDARD_EADG, [28, 33, 38, 43], ["E", "A", "D", "G"]),
+    Tuning(BASS_DROP_D, [26, 33, 38, 43], ["D", "A", "D", "G"]),
+    Tuning(BASS_5_STRING_BEADG, [23, 28, 33, 38, 43], ["B", "E", "A", "D", "G"]),
+]
+
+
 def find_tuning(name: str) -> Tuning:
-    for tuning in TUNINGS:
+    for tuning in TUNINGS + BASS_TUNINGS:
         if tuning.name == name:
             return tuning
     raise ValueError(f"Unknown tuning: {name!r}")

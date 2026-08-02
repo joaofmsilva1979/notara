@@ -9,9 +9,15 @@ from pipeline.tuning import (
     fit_score,
     suggest_alternate_tuning,
 )
+from pipeline.tuning import (
+    BASS_TUNINGS,
+    BASS_STANDARD_EADG,
+    BASS_DROP_D,
+    BASS_5_STRING_BEADG,
+)
 
 
-def test_tunings_catalog_has_seven_entries():
+def test_guitar_tunings_catalog_still_has_seven_entries():
     assert len(TUNINGS) == 7
 
 
@@ -88,3 +94,35 @@ def test_suggest_alternate_tuning_returns_none_with_too_few_notes():
     # signal to trust that from 2 notes alone
     notes = [_note(38), _note(38)]
     assert suggest_alternate_tuning(notes, standard) is None
+
+
+def test_bass_tunings_catalog_has_three_entries():
+    assert len(BASS_TUNINGS) == 3
+
+
+def test_find_tuning_returns_bass_standard():
+    t = find_tuning(BASS_STANDARD_EADG)
+    assert t.open_string_midi == [28, 33, 38, 43]
+    assert t.string_names == ["E", "A", "D", "G"]
+
+
+def test_find_tuning_returns_bass_drop_d():
+    t = find_tuning(BASS_DROP_D)
+    assert t.open_string_midi == [26, 33, 38, 43]
+    assert t.string_names == ["D", "A", "D", "G"]
+
+
+def test_find_tuning_returns_bass_5_string():
+    t = find_tuning(BASS_5_STRING_BEADG)
+    assert t.open_string_midi == [23, 28, 33, 38, 43]
+    assert t.string_names == ["B", "E", "A", "D", "G"]
+
+
+def test_suggest_alternate_tuning_never_suggests_bass_for_guitar_notes():
+    standard = find_tuning(STANDARD_E_A_D_G_B_E)
+    # notes all within normal guitar range — no bass tuning should be suggested
+    notes = [_note(40), _note(45), _note(50), _note(55), _note(59), _note(64),
+             _note(40), _note(45), _note(50)]
+    suggestion = suggest_alternate_tuning(notes, standard)
+    if suggestion is not None:
+        assert suggestion.suggested.name not in (BASS_STANDARD_EADG, BASS_DROP_D, BASS_5_STRING_BEADG)
