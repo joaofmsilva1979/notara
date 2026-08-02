@@ -66,6 +66,7 @@ def render_vocal_tab(
     tempo: float,
     source_name: str,
     tuning: Optional[Tuning] = None,
+    bars_per_line: int = 4,
 ) -> str:
     """Transcribe the vocal stem and render it as ASCII guitar tab.
 
@@ -77,7 +78,7 @@ def render_vocal_tab(
         tuning = find_tuning(STANDARD_E_A_D_G_B_E)
     notes, transposed = transcribe_vocal_melody(vocal_stem_path)
     fretted = map_notes_to_fretboard(notes, tuning)
-    tab = render_tab(bars, fretted, key_estimate, tempo, source_name, tuning)
+    tab = render_tab(bars, fretted, key_estimate, tempo, source_name, tuning, bars_per_line=bars_per_line)
     if transposed:
         tab = tab.replace(
             f"# Tuning: {tuning.name}",
