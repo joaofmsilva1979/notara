@@ -58,7 +58,7 @@ def _char_pos_at_time(
         return 0
     frac = (t_chord - t_line_start) / (t_line_end - t_line_start)
     frac = max(0.0, min(1.0, frac))
-    return int(frac * len(line))
+    return min(int(frac * len(line)), max(0, len(line) - 1))
 
 
 def _assign_line_times(
@@ -87,6 +87,7 @@ def _assign_line_times(
 
         t_start = words[word_idx][1]
         end_idx = min(word_idx + n_line_words - 1, n_words - 1)
+        # end_idx is clamped to the last word to absorb alignment drift on the final line
         t_end = words[end_idx][2]
         word_idx = end_idx + 1
         result.append((line, t_start, t_end))
@@ -143,6 +144,7 @@ def align_lyrics(
             output.append(line)
             continue
 
+        # Exclusive upper bound: a chord exactly at t_end belongs to the next line
         chords_in_line = [c for c in chord_events if t_start <= c.start < t_end]
         if chords_in_line:
             chords_with_pos = [

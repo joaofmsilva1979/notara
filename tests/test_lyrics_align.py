@@ -21,10 +21,10 @@ def test_is_section_label_rejects():
 
 def test_build_chord_line_basic():
     line = "Hello world foo bar"
-    chords = [(0, "Am"), (6, "G")]
+    chords = [(0, "Am"), (10, "G")]
     result = _build_chord_line(line, chords)
-    assert result.startswith("Am")
-    assert "G" in result
+    assert result.index("Am") == 0
+    assert result.index("G") == 10
 
 
 def test_build_chord_line_no_overlap():
@@ -66,3 +66,29 @@ def test_align_lyrics_no_stable_whisper(monkeypatch, tmp_path):
     dummy = tmp_path / "vocals.wav"
     dummy.touch()
     assert la.align_lyrics("Hello world", dummy, []) == ""
+
+
+def test_char_pos_at_line_end_clamped():
+    # t_chord at t_line_end (frac=1.0) must not exceed len(line)-1
+    line = "Hello world"
+    pos = _char_pos_at_time(line, t_chord=2.0, t_line_start=0.0, t_line_end=2.0)
+    assert pos < len(line)
+
+
+def test_assign_line_times_section_labels_get_no_timing():
+    from pipeline.lyrics_align import _assign_line_times
+    words = [("hello", 0.0, 0.5), ("world", 0.5, 1.0)]
+    lines = ["[Verse 1]", "hello world"]
+    result = _assign_line_times(words, lines)
+    assert result[0] == ("[Verse 1]", -1.0, -1.0)
+    assert result[1][1] == 0.0
+    assert result[1][2] == 1.0
+
+
+def test_assign_line_times_blank_lines_get_no_timing():
+    from pipeline.lyrics_align import _assign_line_times
+    words = [("hello", 0.0, 0.5)]
+    lines = ["", "hello"]
+    result = _assign_line_times(words, lines)
+    assert result[0] == ("", -1.0, -1.0)
+    assert result[1][1] == 0.0
