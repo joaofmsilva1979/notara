@@ -34,3 +34,12 @@ def test_split_into_blocks_groups_lines_into_chunks_of_eight():
 
 def test_split_into_blocks_handles_empty_input():
     assert _split_into_blocks([]) == []
+
+
+def test_export_lyrics_pdf(tmp_path):
+    from pipeline.pdf_export import export_lyrics_pdf
+    chart = "[Verse 1]\n  Am      G\nHello world\n"
+    path = tmp_path / "lyrics.pdf"
+    export_lyrics_pdf(path, chart)
+    assert path.exists()
+    assert path.stat().st_size > 200

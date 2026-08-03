@@ -38,6 +38,9 @@ from .key_detection import KeyEstimate
 from .tab_render import render_tab
 from .tuning import Tuning
 
+import re as _re
+from reportlab.lib.colors import HexColor as _HexColor
+
 _, PAGE_HEIGHT = A4  # only page height is used for pagination math; width is fixed by `pagesize=A4` below
 MARGIN = 36  # points (0.5 inch)
 LINES_PER_BLOCK = 8  # 1 chord-label row + 6 string rows + 1 blank separator
@@ -103,5 +106,58 @@ def export_pdf(path: Path, bars: List[ChordSegment], notes: List[FrettedNote],
                 y -= line_height
 
         pdf.showPage()
+
+    pdf.save()
+
+
+_LYRICS_SECTION_RE = _re.compile(r'^\[.+\]$')
+_LYRICS_MARGIN_PT = 50
+_LYRICS_FONT_PT = 9
+_CHORD_LINE_RED = _HexColor("#B71C1C")
+_BLACK = _HexColor("#111111")
+
+
+def _is_chord_annotation_line(line: str) -> bool:
+    """Return True if line looks like a chord annotation (no lowercase letters)."""
+    stripped = line.strip()
+    return bool(stripped) and not any(c.islower() for c in stripped)
+
+
+def export_lyrics_pdf(path: Path, chord_chart: str) -> None:
+    """Render a chord chart string to an A4 PDF.
+
+    Section labels: Courier-Bold 10pt, black.
+    Chord annotation lines (no lowercase): Courier-Bold 9pt, red.
+    Lyric lines: Courier 9pt, black.
+    """
+    line_height = _LYRICS_FONT_PT * 1.2
+    _, page_height = A4
+    lines_per_page = int((page_height - 2 * _LYRICS_MARGIN_PT) / line_height)
+
+    lines = chord_chart.splitlines()
+    pdf = canvas.Canvas(str(path), pagesize=A4)
+    y = page_height - _LYRICS_MARGIN_PT
+    on_page = 0
+
+    for raw_line in lines:
+        if on_page >= lines_per_page:
+            pdf.showPage()
+            y = page_height - _LYRICS_MARGIN_PT
+            on_page = 0
+
+        stripped = raw_line.strip()
+        if _LYRICS_SECTION_RE.match(stripped):
+            pdf.setFont("Courier-Bold", _LYRICS_FONT_PT + 1)
+            pdf.setFillColor(_BLACK)
+        elif _is_chord_annotation_line(raw_line):
+            pdf.setFont("Courier-Bold", _LYRICS_FONT_PT)
+            pdf.setFillColor(_CHORD_LINE_RED)
+        else:
+            pdf.setFont("Courier", _LYRICS_FONT_PT)
+            pdf.setFillColor(_BLACK)
+
+        pdf.drawString(_LYRICS_MARGIN_PT, y, raw_line)
+        y -= line_height
+        on_page += 1
 
     pdf.save()
