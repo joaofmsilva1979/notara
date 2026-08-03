@@ -23,6 +23,8 @@ def _pitch_name(midi_note: int) -> str:
 
 
 def _notes_to_text(notes: list, bars: int, tempo: float) -> str:
+    if tempo <= 0:
+        tempo = 120.0
     seconds_per_beat = 60.0 / tempo
     seconds_per_bar = seconds_per_beat * 4
     lines = [f"Keys — {len(notes)} notes detected — tempo: {tempo:.0f} BPM"]
@@ -38,6 +40,8 @@ def _notes_to_text(notes: list, bars: int, tempo: float) -> str:
 def _notes_to_midi(notes: list, tempo: float) -> bytes:
     if not _HAS_MIDO:
         return b""
+    if tempo <= 0:
+        tempo = 120.0
 
     mid = mido.MidiFile(type=0)
     track = mido.MidiTrack()

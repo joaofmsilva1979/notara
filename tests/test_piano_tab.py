@@ -50,6 +50,12 @@ def test_render_piano_tab_returns_dict(mock_transcribe, tmp_path):
     assert isinstance(result["midi_bytes"], bytes)
 
 
+def test_notes_to_text_zero_tempo_does_not_raise():
+    result = _notes_to_text(FAKE_NOTES, bars=4, tempo=0)
+    assert isinstance(result, str)
+    assert len(result) > 0
+
+
 @patch("pipeline.piano_tab.transcribe")
 def test_render_piano_tab_empty_notes_returns_none(mock_transcribe, tmp_path):
     stem = tmp_path / "piano.wav"
