@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#F8F4F1"/>
+  <rect x="0" y="0" width="8" height="630" fill="#B71C1C"/>
+  <rect x="100" y="240" width="50" height="50" rx="10" fill="#B71C1C"/>
+  <text x="165" y="282" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="52" font-weight="800" letter-spacing="8" fill="#1a1a1a">NOTARA</text>
+  <text x="100" y="340" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="28" fill="#888">Audio → Guitar Tab · Bass Tab · Vocal Melody</text>
+  <text x="100" y="400" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="22" fill="#B71C1C">Free · Open source · Any tuning · No account needed</text>
+</svg>

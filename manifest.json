@@ -1,0 +1,23 @@
+{
+  "name": "Notara",
+  "short_name": "Notara",
+  "description": "Audio to Guitar Tab — free, open source, any tuning",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8F4F1",
+  "theme_color": "#B71C1C",
+  "icons": [
+    {
+      "src": "notara-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "notara-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
