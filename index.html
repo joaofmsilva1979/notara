@@ -36,6 +36,7 @@
         <a class="share-item" id="share-twitter" href="#" target="_blank" rel="noopener">𝕏 / Twitter</a>
         <a class="share-item" id="share-whatsapp" href="#" target="_blank" rel="noopener">WhatsApp</a>
         <a class="share-item" id="share-facebook" href="#" target="_blank" rel="noopener">Facebook</a>
+        <button class="share-item" id="share-instagram">Instagram</button>
         <button class="share-item" id="share-copy">Copy link</button>
       </div>
     </div>
@@ -333,6 +334,7 @@
   const waLink   = document.getElementById('share-whatsapp');
   const fbLink   = document.getElementById('share-facebook');
   const copyBtn  = document.getElementById('share-copy');
+  const igBtn    = document.getElementById('share-instagram');
 
   if (!btn) return;
 
@@ -344,6 +346,18 @@
     e.stopPropagation();
     const open = dropdown.style.display !== 'none';
     dropdown.style.display = open ? 'none' : 'block';
+  });
+
+  // Instagram: use native share sheet on mobile, copy link on desktop
+  igBtn.addEventListener('click', () => {
+    if (navigator.share) {
+      navigator.share({ title: 'Notara', text: shareText, url: shareUrl });
+    } else {
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        igBtn.textContent = 'Link copied — paste on Instagram';
+        setTimeout(() => { igBtn.textContent = 'Instagram'; }, 2500);
+      });
+    }
   });
 
   copyBtn.addEventListener('click', () => {
