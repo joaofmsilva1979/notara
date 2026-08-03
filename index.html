@@ -73,6 +73,20 @@
     <!-- Selected file indicator -->
     <div id="file-indicator" style="display:none;font-size:10px;color:var(--muted);text-align:center;"></div>
 
+    <!-- Lyrics (optional) -->
+    <div id="lyrics-section" class="lyrics-section">
+      <button id="lyrics-toggle" class="lyrics-toggle" type="button">+ ADD LYRICS <span class="lyrics-toggle-hint">optional</span></button>
+      <div id="lyrics-body" class="lyrics-body" style="display:none">
+        <div id="lyrics-drop" class="lyrics-drop">
+          <span>Drop .txt / .doc / .docx or <button id="lyrics-browse" class="btn-link" type="button">browse</button></span>
+          <input type="file" id="lyrics-file-input" accept=".txt,.doc,.docx" style="display:none">
+          <div id="lyrics-file-indicator" class="lyrics-file-indicator" style="display:none"></div>
+        </div>
+        <div class="lyrics-or">— or —</div>
+        <textarea id="lyrics-textarea" class="lyrics-textarea" placeholder="Paste lyrics here..." rows="6"></textarea>
+      </div>
+    </div>
+
     <!-- Options -->
     <div class="options-box">
       <div class="options-head">

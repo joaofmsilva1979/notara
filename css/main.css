@@ -317,3 +317,108 @@ nav { background: var(--white); border-bottom: 1px solid var(--border); padding:
   min-width: 28px;
   text-align: center;
 }
+
+/* ── Lyrics section ─────────────────────────────────────────── */
+.lyrics-section {
+  margin-top: 10px;
+}
+
+.lyrics-toggle {
+  width: 100%;
+  background: none;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  color: #ccc;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  padding: 8px 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .2s, color .2s;
+}
+
+.lyrics-toggle:hover {
+  border-color: #B71C1C;
+  color: #fff;
+}
+
+.lyrics-toggle-hint {
+  font-weight: 400;
+  color: #888;
+  margin-left: 6px;
+  font-size: 10px;
+}
+
+.lyrics-body {
+  margin-top: 8px;
+  padding: 10px;
+  border-left: 2px solid #B71C1C;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lyrics-drop {
+  border: 1px dashed rgba(255,255,255,0.2);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 11px;
+  color: #aaa;
+  text-align: center;
+}
+
+.lyrics-drop .btn-link {
+  background: none;
+  border: none;
+  color: #B71C1C;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.lyrics-file-indicator {
+  margin-top: 4px;
+  font-size: 10px;
+  color: #aaa;
+}
+
+.lyrics-or {
+  text-align: center;
+  font-size: 10px;
+  color: #666;
+}
+
+.lyrics-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: #1a1a1a;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  color: #ddd;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 8px;
+  resize: vertical;
+}
+
+.lyrics-textarea:focus {
+  outline: none;
+  border-color: #B71C1C;
+}
+
+/* ── Lyrics tab content ─────────────────────────────────────── */
+.tab-chord-line {
+  display: block;
+  color: #B71C1C;
+  font-weight: 600;
+  white-space: pre;
+}
+
+.tab-lyric-line {
+  display: block;
+  color: #e8e8e8;
+  white-space: pre;
+}
