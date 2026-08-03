@@ -3,6 +3,8 @@
 let _audio = null;
 let _bars = [];
 let _rafId = null;
+let _initialized = false;
+let _tabBarCache = null;
 
 const playBtn     = document.getElementById('play-btn');
 const playIcon    = document.getElementById('play-icon');
@@ -13,8 +15,18 @@ const chordNow    = document.getElementById('chord-now');
 const chordNext   = document.getElementById('chord-next');
 
 function initPlayback(audioEl, bars) {
+  chordNow.textContent = chordNext.textContent = '—';
+
+  if (_initialized) {
+    _audio = audioEl;
+    _bars = bars || [];
+    _tabBarCache = null;
+    return;
+  }
+
   _audio = audioEl;
   _bars = bars || [];
+  _tabBarCache = null;
 
   _audio.addEventListener('play',  _onPlay);
   _audio.addEventListener('pause', _onPause);
@@ -29,6 +41,8 @@ function initPlayback(audioEl, bars) {
     const frac = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     _audio.currentTime = frac * _audio.duration;
   });
+
+  _initialized = true;
 }
 
 function _togglePlay() {
@@ -48,7 +62,10 @@ function _onPlay() {
 function _onPause() {
   playIcon.innerHTML = '';
   playIcon.className = 'play-triangle';
-  if (_rafId) cancelAnimationFrame(_rafId);
+  if (_rafId) {
+    cancelAnimationFrame(_rafId);
+    _rafId = null;
+  }
 }
 
 function _tick() {
@@ -84,6 +101,11 @@ function _syncTab() {
     }
   }
 
+  // Clamp to last bar at end of track
+  if (activeIdx === -1 && _bars.length > 0 && t >= _bars[_bars.length - 1].end_sec) {
+    activeIdx = _bars.length - 1;
+  }
+
   // Update chord display
   if (activeIdx >= 0) {
     chordNow.textContent = _bars[activeIdx].label || '—';
@@ -94,7 +116,10 @@ function _syncTab() {
   const track = window.getActiveTab ? window.getActiveTab() : 'guitar1';
   if (track === 'drums') return;
 
-  const tabBars = document.querySelectorAll('#tab-content .tab-bar');
+  if (!_tabBarCache) {
+    _tabBarCache = document.querySelectorAll('#tab-content .tab-bar');
+  }
+  const tabBars = _tabBarCache;
   if (!tabBars.length) return;
 
   tabBars.forEach((el, i) => {
