@@ -326,7 +326,7 @@ function _showState(state) {
   stateEmpty.style.display    = state === 'empty'    ? 'flex'  : 'none';
   stateProgress.style.display = state === 'progress' ? 'block' : 'none';
   stateError.style.display    = state === 'error'    ? 'block' : 'none';
-  stateResults.style.display  = state === 'results'  ? 'block' : 'none';
+  stateResults.style.display  = state === 'results'  ? 'flex'  : 'none';
 }
 
 function _showError(msg) {
