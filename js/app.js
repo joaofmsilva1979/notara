@@ -163,7 +163,6 @@ async function _submitJob() {
   btnTranscribe.disabled = true;
   currentJobId = null;
   resultsData = null;
-  selectedLyricsFile = null;
 
   _showState('progress');
 
@@ -185,6 +184,8 @@ async function _submitJob() {
   } else if (lyricsTextarea.value.trim()) {
     formData.append('lyrics_text', lyricsTextarea.value.trim());
   }
+  // Reset after reading so a subsequent job starts clean
+  selectedLyricsFile = null;
 
   try {
     const resp = await fetch(`${API_BASE_URL}/api/jobs`, { method: 'POST', body: formData });
@@ -265,6 +266,8 @@ async function _loadResults() {
     _showState('results');
     // Reveal right panel on mobile
     panelRight.classList.remove('hidden');
+    // Re-enable so user can run another job without re-selecting files
+    btnTranscribe.disabled = false;
   } catch (err) {
     _showError(`Failed to load results: ${err.message}`);
     btnTranscribe.disabled = false;
