@@ -268,3 +268,52 @@ nav { background: var(--white); border-bottom: 1px solid var(--border); padding:
   color: var(--muted);
   letter-spacing: 0.5px;
 }
+
+/* Practice controls */
+.practice-row {
+  display: flex;
+  gap: 24px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.practice-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.practice-label {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.practice-btns {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.prac-btn {
+  background: var(--cream);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.1s, border-color 0.1s;
+  white-space: nowrap;
+}
+.prac-btn:hover { border-color: var(--red); color: var(--red); }
+.prac-btn.active { background: var(--red); border-color: var(--red); color: var(--white); }
+.prac-display {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--red);
+  min-width: 28px;
+  text-align: center;
+}

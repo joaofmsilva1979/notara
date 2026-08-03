@@ -291,6 +291,7 @@ function _renderTab(track, data) {
       const span = document.createElement('span');
       span.className = 'tab-bar';
       span.textContent = segment;
+      span.dataset.orig = segment;
       tabContent.appendChild(span);
       tabContent.appendChild(document.createTextNode('\n\n'));
     }

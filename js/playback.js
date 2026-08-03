@@ -5,6 +5,8 @@ let _bars = [];
 let _rafId = null;
 let _initialized = false;
 let _tabBarCache = null;
+let _transposeSteps = 0;  // semitones offset from original
+let _speed = 1.0;
 
 const playBtn     = document.getElementById('play-btn');
 const playIcon    = document.getElementById('play-icon');
@@ -14,19 +16,87 @@ const timeDisplay = document.getElementById('time-display');
 const chordNow    = document.getElementById('chord-now');
 const chordNext   = document.getElementById('chord-next');
 
+// ── Transpose helpers ────────────────────────────────────────
+const _NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const _ENHARMONIC = {Db:'C#',Eb:'D#',Gb:'F#',Ab:'G#',Bb:'A#'};
+
+function _transposeChordName(name, steps) {
+  if (!name || name === '—') return name;
+  const m = name.match(/^([A-G][b#]?)(.*)$/);
+  if (!m) return name;
+  const root = _ENHARMONIC[m[1]] || m[1];
+  const idx = _NOTES.indexOf(root);
+  if (idx === -1) return name;
+  return _NOTES[((idx + steps) % 12 + 12) % 12] + m[2];
+}
+
+function _shiftTabText(text, steps) {
+  if (steps === 0) return text;
+  return text.split('\n').map(line => {
+    // Tab string line: starts with note name(s) + pipe, e.g. e|, B|, F#|, G#|
+    if (/^[A-Ga-g][#b]?\|/.test(line)) {
+      return line.replace(/\d+/g, n => Math.max(0, parseInt(n) + steps).toString());
+    }
+    // Chord label line (first non-empty non-comment line of a bar block)
+    if (/^[A-G]/.test(line.trim()) && !line.trim().startsWith('#')) {
+      return _transposeChordName(line.trim(), steps);
+    }
+    return line;
+  }).join('\n');
+}
+
+function _applyTranspose() {
+  document.querySelectorAll('#tab-content .tab-bar').forEach(el => {
+    if (el.dataset.orig !== undefined) {
+      el.textContent = _shiftTabText(el.dataset.orig, _transposeSteps);
+    }
+  });
+  // Update chord display
+  const raw = chordNow.dataset.rawChord || chordNow.textContent;
+  chordNow.dataset.rawChord = raw;
+  const shifted = _transposeChordName(raw, _transposeSteps);
+  chordNow.textContent = shifted;
+  if (window.updateChordDisplay) window.updateChordDisplay(shifted);
+  // Update transpose display
+  const disp = document.getElementById('tp-display');
+  if (disp) {
+    const semis = _transposeSteps;
+    disp.textContent = semis === 0 ? '0' : (semis > 0 ? `+${semis}` : `${semis}`);
+  }
+}
+
+// ── Init ─────────────────────────────────────────────────────
 function initPlayback(audioEl, bars) {
   chordNow.textContent = chordNext.textContent = '—';
+  chordNow.dataset.rawChord = '—';
 
   if (_initialized) {
     _audio = audioEl;
     _bars = bars || [];
     _tabBarCache = null;
+    // Reset practice state on new track
+    _transposeSteps = 0;
+    _speed = 1.0;
+    if (_audio) _audio.playbackRate = 1.0;
+    document.querySelectorAll('.speed-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.speed === '1')
+    );
+    _applyTranspose();
     return;
   }
 
   _audio = audioEl;
   _bars = bars || [];
   _tabBarCache = null;
+
+  // Reset practice state on first init
+  _transposeSteps = 0;
+  _speed = 1.0;
+  if (_audio) _audio.playbackRate = 1.0;
+  document.querySelectorAll('.speed-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.speed === '1')
+  );
+  _applyTranspose();
 
   _audio.addEventListener('play',  _onPlay);
   _audio.addEventListener('pause', _onPause);
@@ -40,6 +110,30 @@ function initPlayback(audioEl, bars) {
     const rect = scrubber.getBoundingClientRect();
     const frac = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     _audio.currentTime = frac * _audio.duration;
+  });
+
+  // Transpose buttons
+  const tpM2 = document.getElementById('tp-m2');
+  const tpM1 = document.getElementById('tp-m1');
+  const tpP1 = document.getElementById('tp-p1');
+  const tpP2 = document.getElementById('tp-p2');
+  if (tpM2 && !tpM2._bound) {
+    tpM2._bound = true;
+    tpM2.addEventListener('click', () => { _transposeSteps -= 2; _applyTranspose(); });
+    tpM1.addEventListener('click', () => { _transposeSteps -= 1; _applyTranspose(); });
+    tpP1.addEventListener('click', () => { _transposeSteps += 1; _applyTranspose(); });
+    tpP2.addEventListener('click', () => { _transposeSteps += 2; _applyTranspose(); });
+  }
+
+  // Speed buttons
+  document.querySelectorAll('.speed-btn').forEach(btn => {
+    if (btn._bound) return;
+    btn._bound = true;
+    btn.addEventListener('click', () => {
+      _speed = parseFloat(btn.dataset.speed);
+      if (_audio) _audio.playbackRate = _speed;
+      document.querySelectorAll('.speed-btn').forEach(b => b.classList.toggle('active', b === btn));
+    });
   });
 
   _initialized = true;
@@ -109,11 +203,17 @@ function _syncTab() {
   // Update chord display
   if (activeIdx >= 0) {
     const label = _bars[activeIdx].label || '—';
-    if (chordNow.textContent !== label) {
-      chordNow.textContent = label;
-      if (window.updateChordDisplay) window.updateChordDisplay(label);
+    const rawPrev = chordNow.dataset.rawChord || chordNow.textContent;
+    if (rawPrev !== label) {
+      chordNow.dataset.rawChord = label;
+      const shifted = _transposeChordName(label, _transposeSteps);
+      chordNow.textContent = shifted;
+      if (window.updateChordDisplay) window.updateChordDisplay(shifted);
     }
-    chordNext.textContent = activeIdx + 1 < _bars.length ? _bars[activeIdx + 1].label : '—';
+    chordNext.textContent = _transposeChordName(
+      activeIdx + 1 < _bars.length ? _bars[activeIdx + 1].label : '—',
+      _transposeSteps
+    );
   }
 
   // Highlight tab bar — only for guitar/bass/vocals (not drums)
