@@ -1,0 +1,15 @@
+# Pipeline dependencies
+demucs>=4.0.1
+basic-pitch[coreml]>=0.4.0
+librosa>=0.10.1
+soundfile>=0.12.1
+mido>=1.3.2
+numpy<2.0
+scipy>=1.10
+reportlab>=5.0.0
+
+# Web platform dependencies
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9
+yt-dlp>=2024.1.1
