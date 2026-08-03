@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notara — Audio to Guitar Tab</title>
+  <meta name="description" content="Upload audio or paste a YouTube URL. Notara transcribes guitar tab, bass tab, and vocal melody automatically. Free. No account. Any tuning.">
+  <meta name="keywords" content="guitar tab, guitartab, guitar tab generator, audio to guitar tab, ultimate guitar alternative, automatic guitar transcription, bass tab from audio, vocal melody tab, free tab maker">
+  <link rel="canonical" href="https://notara.io">
+  <meta property="og:title" content="Notara — Audio to Guitar Tab">
+  <meta property="og:description" content="Turn any audio into guitar tab. Upload a file or paste a YouTube URL. Free, open source, no account needed.">
+  <meta property="og:image" content="https://notara.io/og-image.svg">
+  <meta property="og:url" content="https://notara.io">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Notara","applicationCategory":"MusicApplication","operatingSystem":"Web","url":"https://notara.io","description":"Automatic guitar tab and bass tab transcription from audio. Free and open source.","offers":{"@type":"Offer","price":"0"}}</script>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#B71C1C">
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">
+    <img class="logo-img" src="notara-logo.png" alt="Notara logo">
+    <span class="logo-text">NOTARA</span>
+  </div>
+  <div class="nav-sub">Audio → Guitar Tab</div>
+  <a class="nav-gh" href="https://github.com/joaofmsilva1979/notara" target="_blank">GitHub ↗</a>
+</nav>
+
+<!-- TOOL -->
+<div class="tool-wrapper">
+
+  <!-- LEFT PANEL -->
+  <div class="panel-left">
+
+    <!-- YouTube -->
+    <div class="yt-box">
+      <div class="field-label">YouTube URL</div>
+      <div class="yt-row">
+        <input class="yt-input" id="yt-input" type="url" placeholder="https://youtube.com/watch?v=…">
+        <button class="btn-fetch" id="btn-fetch" disabled>Fetch</button>
+      </div>
+    </div>
+
+    <div class="or-divider"><span>or</span></div>
+
+    <!-- Drop zone -->
+    <div class="drop-zone" id="drop-zone">
+      <div class="drop-icon">♪</div>
+      <div class="drop-title">Drop your audio here</div>
+      <div class="drop-sub">MP3 · WAV · M4A · FLAC · OGG · OPUS — up to 100 MB</div>
+      <button class="btn-browse" id="btn-browse">Browse files</button>
+      <input type="file" id="file-input" accept=".mp3,.wav,.m4a,.flac,.ogg,.opus" hidden>
+    </div>
+
+    <!-- Selected file indicator -->
+    <div id="file-indicator" style="display:none;font-size:10px;color:var(--muted);text-align:center;"></div>
+
+    <!-- Options -->
+    <div class="options-box">
+      <div class="options-head">
+        <span class="options-head-title">Options</span>
+        <span class="options-head-hint">All optional — auto-detect if skipped</span>
+      </div>
+      <div class="options-body">
+
+        <!-- Tuning -->
+        <div>
+          <div class="opt-label">Tuning</div>
+          <select class="opt-select" id="opt-tuning">
+            <option value="auto">✦ Auto-detect</option>
+            <optgroup label="── Standard ──">
+              <option value="Standard EADGBE">Standard (E A D G B e)</option>
+              <option value="Eb Standard">Std ½↓ — Eb (Eb Ab Db Gb Bb eb)</option>
+              <option value="D Standard">Std 1↓ — D (D G C F A d)</option>
+              <option value="C# Standard">Std 1½↓ — C# (C# F# B E G# c#)</option>
+              <option value="C Standard">Std 2↓ — C (C F Bb Eb G c)</option>
+            </optgroup>
+            <optgroup label="── Drop ──">
+              <option value="Drop D">Drop D (D A D G B e)</option>
+              <option value="Drop C#">Drop C# (C# Ab Db Gb Bb eb)</option>
+              <option value="Drop C">Drop C (C G C F A d)</option>
+              <option value="Drop B">Drop B (B F# B E G# c#)</option>
+              <option value="Drop A">Drop A (A E A D F# b)</option>
+            </optgroup>
+            <optgroup label="── Open ──">
+              <option value="Open G">Open G (D G D G B d)</option>
+              <option value="Open D">Open D (D A D F# A d)</option>
+              <option value="Open E">Open E (E B E G# B e)</option>
+              <option value="Open A">Open A (E A E A C# e)</option>
+              <option value="Open C">Open C (C G C G C e)</option>
+              <option value="DADGAD">DADGAD (D A D G A d)</option>
+            </optgroup>
+            <optgroup label="── 7-String ──">
+              <option value="7-String Standard">7-String Standard (B E A D G B e)</option>
+              <option value="7-String Drop A">7-String Drop A (A E A D G B e)</option>
+            </optgroup>
+            <optgroup label="── 8-String ──">
+              <option value="8-String Standard">8-String Standard (F# B E A D G B e)</option>
+              <option value="8-String Drop E">8-String Drop E (E B E A D G B e)</option>
+            </optgroup>
+            <optgroup label="── Baritone ──">
+              <option value="Baritone B">Baritone B (B E A D F# b)</option>
+              <option value="Baritone A">Baritone A (A D G C E a)</option>
+            </optgroup>
+            <optgroup label="── Bass ──">
+              <option value="Bass Standard EADG">Bass Standard (E A D G)</option>
+              <option value="Bass Drop D">Bass Drop D (D A D G)</option>
+              <option value="Bass 5-String BEADG">Bass 5-String (B E A D G)</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <!-- Key -->
+        <div>
+          <div class="opt-label">Key <span style="font-weight:400;color:var(--dim);font-size:9px;">— hint for chord detection</span></div>
+          <select class="opt-select" id="opt-key">
+            <option value="auto">✦ Auto-detect</option>
+            <optgroup label="Major">
+              <option value="C major">C major</option><option value="C# major">C# major</option>
+              <option value="D major">D major</option><option value="D# major">D# major</option>
+              <option value="E major">E major</option><option value="F major">F major</option>
+              <option value="F# major">F# major</option><option value="G major">G major</option>
+              <option value="G# major">G# major</option><option value="A major">A major</option>
+              <option value="A# major">A# major</option><option value="B major">B major</option>
+            </optgroup>
+            <optgroup label="Minor">
+              <option value="C minor">C minor</option><option value="C# minor">C# minor</option>
+              <option value="D minor">D minor</option><option value="D# minor">D# minor</option>
+              <option value="E minor">E minor</option><option value="F minor">F minor</option>
+              <option value="F# minor">F# minor</option><option value="G minor">G minor</option>
+              <option value="G# minor">G# minor</option><option value="A minor">A minor</option>
+              <option value="A# minor">A# minor</option><option value="B minor">B minor</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <!-- Multiple guitars -->
+        <div class="opt-row">
+          <div>
+            <div class="opt-label">Multiple guitars</div>
+            <div class="opt-sublabel">Splits stereo L / R channels</div>
+          </div>
+          <div class="toggle" id="toggle-multi">
+            <div class="toggle-yes" data-val="0">No</div>
+            <div class="toggle-no" data-val="1">Yes</div>
+          </div>
+        </div>
+
+        <!-- Bass tab -->
+        <div class="opt-row">
+          <div>
+            <div class="opt-label">Bass tab</div>
+            <div class="opt-sublabel">4-string tab from bass stem</div>
+          </div>
+          <div class="toggle" id="toggle-bass">
+            <div class="toggle-yes" data-val="0">No</div>
+            <div class="toggle-no" data-val="1">Yes</div>
+          </div>
+        </div>
+
+        <!-- Vocal melody -->
+        <div class="opt-row">
+          <div>
+            <div class="opt-label">Vocal melody</div>
+            <div class="opt-sublabel">Melody tab in guitar octave</div>
+          </div>
+          <div class="toggle" id="toggle-vocal">
+            <div class="toggle-yes" data-val="0">No</div>
+            <div class="toggle-no" data-val="1">Yes</div>
+          </div>
+        </div>
+
+        <!-- Drum summary -->
+        <div class="opt-row">
+          <div>
+            <div class="opt-label">Drum summary</div>
+            <div class="opt-sublabel">ASCII groove map + pattern</div>
+          </div>
+          <div class="toggle" id="toggle-drums">
+            <div class="toggle-yes" data-val="0">No</div>
+            <div class="toggle-no" data-val="1">Yes</div>
+          </div>
+        </div>
+
+        <!-- Keys / Keyboard -->
+        <div class="opt-row">
+          <div>
+            <div class="opt-label">Keys / Keyboard</div>
+            <div class="opt-sublabel">MIDI + note list from piano stem</div>
+          </div>
+          <div class="toggle" id="toggle-keys">
+            <div class="toggle-yes" data-val="0">No</div>
+            <div class="toggle-no" data-val="1">Yes</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Transcribe button -->
+    <button class="btn-transcribe" id="btn-transcribe" disabled>TRANSCRIBE</button>
+
+    <!-- PWA install prompt (hidden by default, shown when browser fires beforeinstallprompt) -->
+    <button class="btn-pwa-install" id="btn-pwa-install" style="display:none">+ Add to home screen</button>
+
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="panel-right" id="panel-right">
+
+    <!-- Empty state (default) -->
+    <div class="right-empty" id="state-empty">
+      <div class="right-empty-icon">♩</div>
+      <div class="right-empty-text">Upload audio or paste a YouTube URL,<br>then hit TRANSCRIBE.</div>
+    </div>
+
+    <!-- Progress (shown during processing) -->
+    <div class="progress-box" id="state-progress" style="display:none">
+      <div class="progress-title">Processing <span style="color:var(--muted);font-weight:400;font-size:10px;">— ~2 min</span></div>
+      <div class="progress-steps" id="progress-steps"></div>
+    </div>
+
+    <!-- Error state -->
+    <div class="error-box" id="state-error" style="display:none"></div>
+
+    <!-- Results (shown after done) -->
+    <div id="state-results" style="display:none">
+
+      <!-- Playback bar -->
+      <div class="playback-box">
+        <div class="playback-row">
+          <button class="play-btn" id="play-btn">
+            <div class="play-triangle" id="play-icon"></div>
+          </button>
+          <div class="scrubber" id="scrubber">
+            <div class="scrubber-track"><div class="scrubber-fill" id="scrubber-fill"></div></div>
+          </div>
+          <div class="time" id="time-display">0:00 / 0:00</div>
+        </div>
+        <div class="chord-now">
+          <span class="chord-label">Now:</span>
+          <span class="chord-pill" id="chord-now">—</span>
+          <span class="chord-next">→ next: <strong id="chord-next">—</strong></span>
+        </div>
+      </div>
+
+      <!-- Tab panel -->
+      <div class="tab-panel">
+        <div class="tab-switcher" id="tab-switcher"></div>
+        <div class="tab-content" id="tab-content"></div>
+        <div class="tab-downloads" id="tab-downloads"></div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- ABOUT -->
+<section class="about">
+  <div class="about-header">
+    <div class="about-rule"></div>
+    <div class="about-title">Who's Behind This</div>
+    <div class="about-sub">The why. The how. The what.</div>
+  </div>
+
+  <div class="about-body">
+    <div class="about-photo-col">
+      <img class="about-photo" src="joao.png" alt="João Silva">
+      <div class="about-name">JOÃO SILVA</div>
+      <div class="about-role">Musician · Builder</div>
+    </div>
+    <div class="about-text">
+      <div class="about-section-tag">— Why</div>
+      <p class="about-para">Sometimes you need to work with your ears. Sometimes you need a little help. There's no shame in the second one — every great guitarist learns from transcribing, and transcribing takes time that not everyone has. I made Notara because I wanted that help to exist, and to be honest about what it is: a starting point, not a finished score.</p>
+
+      <div class="about-section-tag">— How</div>
+      <p class="about-para">Notara runs Demucs to separate the guitar and bass stems from your audio, then uses basic-pitch to transcribe notes, detects the key and chords, and maps everything to a real fretboard — accounting for tuning, position, and whether there's one guitar or two. The output is an actual tab you can play from. Built in Python. Shaped with Claude.</p>
+
+      <div class="about-section-tag">— What</div>
+      <p class="about-para">Guitar tab. Bass tab. PDF. MIDI. For any tuning — standard, drop, open, 7-string, 8-string. Auto-detected or manually set. Free. Open source. <a href="https://github.com/joaofmsilva1979/notara" style="color:var(--red);text-decoration:none;font-weight:600;">github.com/joaofmsilva1979/notara ↗</a></p>
+
+      <div class="privacy-row">
+        <div class="privacy-icon">🔒</div>
+        <p class="privacy-text"><strong>Nothing is saved.</strong> Your audio is processed and immediately discarded. No account, no tracking, no storage. What you upload stays between you and the algorithm.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tip-row">
+    <p class="tip-copy">Notara is free. No catch, no account, no ads.<br>If it saved you an hour of ear training and you feel like it —</p>
+    <a class="btn-donate" href="https://ko-fi.com/notara" target="_blank">DONATE</a>
+    <div class="tip-alt">or via <a href="https://paypal.me/joaosilva" target="_blank">PayPal</a> &nbsp;·&nbsp; if not, no worries — go play.</div>
+  </div>
+
+  <div class="about-footer">
+    NOTARA · 2026 · Made with stubbornness and <span style="color:var(--red);">♥</span> · Built with <a href="https://claude.ai" target="_blank">Claude</a>
+  </div>
+</section>
+
+<audio id="audio-player" style="display:none"></audio>
+
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+<script src="js/playback.js"></script>
+</body>
+</html>
