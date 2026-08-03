@@ -104,10 +104,13 @@ async def download_file(job_id: str, track: str, fmt: str):
         raise HTTPException(404, "Job not found")
     if job.status != "done":
         raise HTTPException(409, "Job not done yet")
-    allowed_tracks = {"guitar1", "guitar2", "bass", "vocals", "keys"}
+    allowed_tracks = {"guitar1", "guitar2", "bass", "vocals", "keys", "drums"}
     allowed_fmts = {"pdf", "txt", "midi"}
+    drums_only_fmts = {"txt"}
     if track not in allowed_tracks or fmt not in allowed_fmts:
         raise HTTPException(400, "Invalid track or format")
+    if track == "drums" and fmt not in drums_only_fmts:
+        raise HTTPException(400, "Drums only supports txt format")
     file_path = job.work_dir / f"{track}.{fmt}"
     if not file_path.exists():
         raise HTTPException(404, f"{track}.{fmt} not available")
