@@ -51,6 +51,15 @@ function _applyTranspose() {
       el.textContent = _shiftTabText(el.dataset.orig, _transposeSteps);
     }
   });
+  // Transpose chord annotation lines in lyrics tab
+  document.querySelectorAll('.tab-chord-line').forEach(span => {
+    const orig = span.dataset.origChordLine || span.textContent;
+    span.dataset.origChordLine = orig;
+    span.textContent = orig.replace(
+      /\b([A-G][#b]?(?:m(?:aj7?|7b5)?|7|maj7|sus[24]|dim7?|aug)?)\b/g,
+      name => _transposeChordName(name, _transposeSteps)
+    );
+  });
   // Update chord display
   const raw = chordNow.dataset.rawChord || chordNow.textContent;
   chordNow.dataset.rawChord = raw;

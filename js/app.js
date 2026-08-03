@@ -9,6 +9,7 @@ let resultsData = null;
 let activeTab = 'guitar1';
 const toggleState = { multi: false, bass: false, vocal: false, drums: false, keys: false };
 let pwaInstallPrompt = null;
+let selectedLyricsFile = null;
 
 // ── DOM refs ─────────────────────────────────────────────────
 const ytInput       = document.getElementById('yt-input');
@@ -28,6 +29,14 @@ const tabContent    = document.getElementById('tab-content');
 const tabDownloads  = document.getElementById('tab-downloads');
 const panelRight    = document.getElementById('panel-right');
 const btnPwaInstall = document.getElementById('btn-pwa-install');
+
+const lyricsToggle    = document.getElementById('lyrics-toggle');
+const lyricsBody      = document.getElementById('lyrics-body');
+const lyricsDrop      = document.getElementById('lyrics-drop');
+const lyricsFileInput = document.getElementById('lyrics-file-input');
+const lyricsBrowse    = document.getElementById('lyrics-browse');
+const lyricsIndicator = document.getElementById('lyrics-file-indicator');
+const lyricsTextarea  = document.getElementById('lyrics-textarea');
 
 // ── PWA Install ──────────────────────────────────────────────
 window.addEventListener('beforeinstallprompt', e => {
@@ -109,6 +118,39 @@ _setupToggle('vocal', 'vocal');
 _setupToggle('drums', 'drums');
 _setupToggle('keys', 'keys');
 
+// ── Lyrics section ────────────────────────────────────────────
+lyricsToggle.addEventListener('click', () => {
+  const open = lyricsBody.style.display !== 'none';
+  lyricsBody.style.display = open ? 'none' : 'flex';
+  lyricsToggle.textContent = '';
+  lyricsToggle.appendChild(document.createTextNode(open ? '+ ADD LYRICS ' : '− REMOVE LYRICS '));
+  const hint = document.createElement('span');
+  hint.className = 'lyrics-toggle-hint';
+  hint.textContent = 'optional';
+  lyricsToggle.appendChild(hint);
+});
+
+lyricsBrowse.addEventListener('click', () => lyricsFileInput.click());
+
+lyricsFileInput.addEventListener('change', () => {
+  if (lyricsFileInput.files[0]) _setLyricsFile(lyricsFileInput.files[0]);
+});
+
+lyricsDrop.addEventListener('dragover', e => { e.preventDefault(); lyricsDrop.classList.add('drag-over'); });
+lyricsDrop.addEventListener('dragleave', () => lyricsDrop.classList.remove('drag-over'));
+lyricsDrop.addEventListener('drop', e => {
+  e.preventDefault();
+  lyricsDrop.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) _setLyricsFile(e.dataTransfer.files[0]);
+});
+
+function _setLyricsFile(file) {
+  selectedLyricsFile = file;
+  lyricsIndicator.textContent = `Selected: ${file.name}`;
+  lyricsIndicator.style.display = 'block';
+  lyricsTextarea.value = '';
+}
+
 // ── Transcribe button ────────────────────────────────────────
 function _updateTranscribeButton() {
   btnTranscribe.disabled = !selectedFile && !ytReady;
@@ -121,6 +163,7 @@ async function _submitJob() {
   btnTranscribe.disabled = true;
   currentJobId = null;
   resultsData = null;
+  selectedLyricsFile = null;
 
   _showState('progress');
 
@@ -137,6 +180,11 @@ async function _submitJob() {
   formData.append('vocal_tab', toggleState.vocal);
   formData.append('drum_summary', toggleState.drums);
   formData.append('keys_tab', toggleState.keys);
+  if (selectedLyricsFile) {
+    formData.append('lyrics_file', selectedLyricsFile);
+  } else if (lyricsTextarea.value.trim()) {
+    formData.append('lyrics_text', lyricsTextarea.value.trim());
+  }
 
   try {
     const resp = await fetch(`${API_BASE_URL}/api/jobs`, { method: 'POST', body: formData });
@@ -240,7 +288,12 @@ function _renderResults(data) {
 }
 
 function _tabLabel(track) {
-  return { guitar1: 'Guitar 1', guitar2: 'Guitar 2', bass: 'Bass', vocals: 'Vocals', drums: 'Drums', keys: 'Keys' }[track] || track;
+  return { guitar1: 'Guitar 1', guitar2: 'Guitar 2', bass: 'Bass', vocals: 'Vocals', drums: 'Drums', keys: 'Keys', lyrics: 'Lyrics' }[track] || track;
+}
+
+function _isChordAnnotationLine(line) {
+  const s = line.trim();
+  return s.length > 0 && !/[a-z]/.test(s);
 }
 
 function _switchTab(track, allTracks) {
@@ -271,6 +324,30 @@ function _renderTab(track, data) {
     tabDownloads.innerHTML = '';
     tabDownloads.appendChild(_dlBtn('↓ MIDI', 'dl-midi', 'keys', 'midi'));
     tabDownloads.appendChild(_dlBtn('↓ TXT', 'dl-txt', 'keys', 'txt'));
+    return;
+  }
+
+  if (track === 'lyrics') {
+    tabContent.innerHTML = '';
+    const lines = text.split('\n');
+    lines.forEach(line => {
+      const span = document.createElement('span');
+      const stripped = line.trim();
+      if (stripped.startsWith('[') && stripped.endsWith(']') && stripped.length > 2) {
+        span.className = 'tab-comment';
+      } else if (_isChordAnnotationLine(line)) {
+        span.className = 'tab-chord-line';
+        span.dataset.origChordLine = line;
+      } else {
+        span.className = 'tab-lyric-line';
+      }
+      span.textContent = line;
+      tabContent.appendChild(span);
+      tabContent.appendChild(document.createTextNode('\n'));
+    });
+    tabDownloads.innerHTML = '';
+    tabDownloads.appendChild(_dlBtn('↓ TXT', 'dl-txt', 'lyrics', 'txt'));
+    tabDownloads.appendChild(_dlBtn('↓ PDF', 'dl-pdf', 'lyrics', 'pdf'));
     return;
   }
 
