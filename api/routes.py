@@ -1,23 +1,36 @@
 """All API route handlers for Notara."""
 from __future__ import annotations
 
+import io
+import re
 import shutil
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from . import jobs as job_store
 from . import worker as _worker
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 _AUDIO_EXTENSIONS = {".mp3", ".wav", ".m4a", ".flac", ".ogg", ".opus"}
 
+MAX_UPLOAD_BYTES = 150 * 1024 * 1024  # 150 MB
+
+YT_PATTERN = re.compile(
+    r'^https?://(www\.)?(youtube\.com/watch\?.*v=[\w-]+|youtu\.be/[\w-]+)'
+)
+
 
 @router.post("/jobs")
+@limiter.limit("10/hour")
 async def create_job(
+    request: Request,
     background_tasks: BackgroundTasks,
     file: Optional[UploadFile] = File(None),
     youtube_url: Optional[str] = Form(None),
@@ -32,6 +45,9 @@ async def create_job(
     if not file and not youtube_url:
         raise HTTPException(400, "Provide either a file upload or youtube_url")
 
+    if youtube_url and not YT_PATTERN.match(youtube_url):
+        raise HTTPException(status_code=400, detail="Invalid YouTube URL.")
+
     job = job_store.create_job()
 
     audio_path: Optional[Path] = None
@@ -39,6 +55,11 @@ async def create_job(
         suffix = Path(file.filename or "audio.mp3").suffix.lower()
         if suffix not in _AUDIO_EXTENSIONS:
             raise HTTPException(400, f"Unsupported file type: {suffix}")
+        content = await file.read()
+        if len(content) > MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=413, detail="File too large. Maximum size is 150 MB.")
+        file.file = io.BytesIO(content)
+        file.size = len(content)
         audio_path = job.work_dir / f"audio{suffix}"
         with open(audio_path, "wb") as f:
             shutil.copyfileobj(file.file, f)
