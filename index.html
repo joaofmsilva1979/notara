@@ -26,12 +26,25 @@
     <img class="logo-img" src="notara-logo.png" alt="Notara logo">
     <span class="logo-text">NOTARA</span>
   </div>
-  <div class="nav-sub">Audio → Guitar Tab</div>
+  <nav-links class="nav-links">
+    <a class="nav-link" href="#tool">TAB CONVERT</a>
+    <a class="nav-link" href="#about">WHO'S BEHIND</a>
+    <a class="nav-link" href="#donate">SUPPORT</a>
+    <div class="nav-share-wrap">
+      <button class="nav-link nav-share-btn" id="btn-share">SHARE</button>
+      <div class="share-dropdown" id="share-dropdown" style="display:none">
+        <a class="share-item" id="share-twitter" href="#" target="_blank" rel="noopener">𝕏 / Twitter</a>
+        <a class="share-item" id="share-whatsapp" href="#" target="_blank" rel="noopener">WhatsApp</a>
+        <a class="share-item" id="share-facebook" href="#" target="_blank" rel="noopener">Facebook</a>
+        <button class="share-item" id="share-copy">Copy link</button>
+      </div>
+    </div>
+  </nav-links>
   <a class="nav-gh" href="https://github.com/joaofmsilva1979/notara" target="_blank">GitHub ↗</a>
 </nav>
 
 <!-- TOOL -->
-<div class="tool-wrapper">
+<div class="tool-wrapper" id="tool">
 
   <!-- LEFT PANEL -->
   <div class="panel-left">
@@ -262,7 +275,7 @@
 </div>
 
 <!-- ABOUT -->
-<section class="about">
+<section class="about" id="about">
   <div class="about-header">
     <div class="about-rule"></div>
     <div class="about-title">Who's Behind This</div>
@@ -292,7 +305,7 @@
     </div>
   </div>
 
-  <div class="tip-row">
+  <div class="tip-row" id="donate">
     <p class="tip-copy">Notara is free. No catch, no account, no ads.<br>If it saved you an hour of ear training and you feel like it —</p>
     <a class="btn-donate" href="https://ko-fi.com/notara" target="_blank">DONATE</a>
     <div class="tip-alt">or via <a href="https://paypal.me/joaosilva" target="_blank">PayPal</a> &nbsp;·&nbsp; if not, no worries — go play.</div>
@@ -309,5 +322,41 @@
 <script src="js/app.js"></script>
 <script src="js/chords.js"></script>
 <script src="js/playback.js"></script>
+<script>
+(function() {
+  const shareUrl  = 'https://notara.io';
+  const shareText = 'Turn any audio into guitar tab — free, open source, no account needed.';
+
+  const btn      = document.getElementById('btn-share');
+  const dropdown = document.getElementById('share-dropdown');
+  const twLink   = document.getElementById('share-twitter');
+  const waLink   = document.getElementById('share-whatsapp');
+  const fbLink   = document.getElementById('share-facebook');
+  const copyBtn  = document.getElementById('share-copy');
+
+  if (!btn) return;
+
+  twLink.href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+  waLink.href = `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`;
+  fbLink.href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = dropdown.style.display !== 'none';
+    dropdown.style.display = open ? 'none' : 'block';
+  });
+
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => { copyBtn.textContent = 'Copy link'; }, 2000);
+    });
+  });
+
+  document.addEventListener('click', () => {
+    dropdown.style.display = 'none';
+  });
+})();
+</script>
 </body>
 </html>
