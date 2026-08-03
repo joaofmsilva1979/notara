@@ -26,8 +26,8 @@ class Note:
     velocity: float  # 0-1 amplitude estimate
 
 
-def transcribe(audio_path: Path, onset_threshold: float = 0.5,
-                frame_threshold: float = 0.3) -> List[Note]:
+def transcribe(audio_path: Path, onset_threshold: float = 0.6,
+                frame_threshold: float = 0.4) -> List[Note]:
     _, midi_data, note_events = predict(
         str(audio_path),
         onset_threshold=onset_threshold,
@@ -40,5 +40,7 @@ def transcribe(audio_path: Path, onset_threshold: float = 0.5,
         Note(start=start, end=end, pitch=int(pitch), velocity=float(amplitude))
         for start, end, pitch, amplitude, _pitch_bends in note_events
     ]
+    # Drop very low-confidence detections — likely Demucs separation artifacts
+    notes = [n for n in notes if n.velocity >= 0.12]
     notes.sort(key=lambda n: n.start)
     return notes

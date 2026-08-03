@@ -33,7 +33,7 @@ from .transcription import Note
 from .tuning import MAX_FRET, STANDARD_E_A_D_G_B_E, Tuning, find_tuning
 
 CHORD_TOLERANCE = 0.05  # seconds; notes starting within this window are one "grasp"
-POSITION_SPAN = 4  # fret span of one neck position (e.g. frets 5–9)
+POSITION_SPAN = 5  # fret span of one neck position (e.g. frets 5–9)
 
 
 @dataclass
@@ -99,9 +99,9 @@ def map_notes_to_fretboard(notes: List[Note], tuning: Optional[Tuning] = None) -
             string_idx, fret = chosen
             used_strings.add(string_idx)
 
-            # Shift window when a non-open fret lands outside it
+            # Shift window only when a non-open fret lands outside it
             if fret > 0 and not (position_start <= fret <= position_start + POSITION_SPAN):
-                position_start = max(0, fret - 2)
+                position_start = max(0, fret - 1)
 
             fretted.append(FrettedNote(
                 string=string_idx, fret=fret,
