@@ -113,9 +113,17 @@ def summarize_drums(drum_stem_path: Path, tempo: float) -> str:
     labels = [_classify_onset(y, sr, int(s)) for s in onset_samples]
 
     bar_sec = 60.0 / tempo * 4
-    n_bars = max(4, min(8, int(onsets_sec[-1] / bar_sec) + 1))
-    grid = _build_grid(onsets_sec, labels, tempo, n_bars=n_bars)
+    first_onset_bar = int(onsets_sec[0] / bar_sec)
+    n_bars = 8
+    # Offset onset times so bar display starts at first_onset_bar
+    onsets_shifted = onsets_sec - first_onset_bar * bar_sec
+    # Only keep onsets within the 8-bar window
+    mask = (onsets_shifted >= 0) & (onsets_shifted < n_bars * bar_sec)
+    onsets_window = onsets_shifted[mask]
+    labels_window = [labels[i] for i, keep in enumerate(mask) if keep]
+    grid = _build_grid(onsets_window, labels_window, tempo, n_bars=n_bars)
 
     description = _pattern_description(grid, tempo)
-    header = f"# Tempo: {tempo:.0f} BPM · {description}"
+    bar_offset_display = first_onset_bar + 1  # 1-indexed
+    header = f"# Tempo: {tempo:.0f} BPM · {description} (bars {bar_offset_display}–{bar_offset_display + n_bars - 1})"
     return f"{header}\n\n{_ascii_pattern(grid)}"

@@ -1,7 +1,7 @@
 """Vocal melody transcription and tab rendering.
 
 Transcribes a Demucs vocal stem using basic-pitch, optionally transposes
-down one octave if the median pitch is above MIDI 60 (middle C), then
+down one octave if the median pitch is above MIDI 76 (E5), then
 renders as a guitar-octave melody tab using the existing pipeline infrastructure.
 
 Known limitations:
@@ -27,12 +27,16 @@ from .tab_render import render_tab
 from .transcription import Note, transcribe
 from .tuning import STANDARD_E_A_D_G_B_E, Tuning, find_tuning
 
-GUITAR_RANGE_MIDPOINT = 60  # MIDI middle C; median above this triggers octave shift
+GUITAR_RANGE_MIDPOINT = 76  # MIDI E5; only very high voices (soprano/falsetto) get shifted
 OCTAVE_SEMITONES = 12
 
 
 def _should_transpose(notes: List[Note]) -> bool:
-    """Return True if the median pitch of `notes` exceeds GUITAR_RANGE_MIDPOINT."""
+    """Return True if the median pitch of `notes` exceeds GUITAR_RANGE_MIDPOINT (E5=76).
+
+    Most pop/rock vocal melodies are below E5 and sit naturally in guitar range
+    without transposition. Only very high voices (soprano, falsetto) trigger the shift.
+    """
     if not notes:
         return False
     return float(np.median([n.pitch for n in notes])) > GUITAR_RANGE_MIDPOINT

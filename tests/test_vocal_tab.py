@@ -24,7 +24,7 @@ def _make_key():
 
 
 def test_should_transpose_high_notes():
-    notes = _make_notes([65, 67, 69, 71, 72])  # median=69, above 60
+    notes = _make_notes([77, 79, 81, 83, 84])  # median=81, above 76 (E5)
     assert vocal_tab._should_transpose(notes) is True
 
 
@@ -38,7 +38,7 @@ def test_should_not_transpose_empty():
 
 
 def test_transcribe_vocal_melody_transposes_when_high():
-    high_notes = _make_notes([65, 67, 69, 71, 72])
+    high_notes = _make_notes([77, 79, 81, 83, 84])
     with patch("pipeline.vocal_tab.transcribe", return_value=high_notes):
         result_notes, transposed = vocal_tab.transcribe_vocal_melody(Path("fake.wav"))
     assert transposed is True
@@ -54,7 +54,7 @@ def test_transcribe_vocal_melody_no_transpose_when_low():
 
 
 def test_render_vocal_tab_contains_transpose_comment_when_transposed():
-    high_notes = _make_notes([65, 67, 69, 71, 72])
+    high_notes = _make_notes([77, 79, 81, 83, 84])
     with patch("pipeline.vocal_tab.transcribe", return_value=high_notes):
         result = vocal_tab.render_vocal_tab(
             Path("fake.wav"), _make_bars(), _make_key(), 120.0, "test.wav"
@@ -72,6 +72,6 @@ def test_render_vocal_tab_no_transpose_comment_when_not_transposed():
 
 
 def test_should_not_transpose_at_boundary():
-    """median == 60 is not > 60, so no transpose."""
-    notes = _make_notes([60, 60, 60, 60, 60])
+    """median == 76 is not > 76, so no transpose (boundary test)."""
+    notes = _make_notes([76, 76, 76, 76, 76])
     assert vocal_tab._should_transpose(notes) is False
