@@ -35,9 +35,21 @@ def test_ascii_pattern_has_three_rows():
     labels = ["K", "H", "S"]
     grid = drum_summary._build_grid(onsets, labels, tempo=120.0, n_bars=1)
     pattern = drum_summary._ascii_pattern(grid)
+    assert "Bar 1:" in pattern
     assert "K:" in pattern
     assert "S:" in pattern
     assert "HH:" in pattern
+
+
+def test_classify_onset_low_sr():
+    # At sr=11025, sr//2=5512 <= HIHAT_LO=8000, so hi-hat band is unreachable.
+    # Classification must not crash and must return "K" or "S" for low-freq tones.
+    sr = 11025
+    t = np.linspace(0, 0.05, int(sr * 0.05))
+    # Synthesise a 100 Hz sine (kick-band)
+    y = np.sin(2 * np.pi * 100 * t).astype(np.float32)
+    result = drum_summary._classify_onset(y, sr, 0)
+    assert result in ("K", "S")
 
 
 def test_summarize_drums_returns_string(tmp_path):

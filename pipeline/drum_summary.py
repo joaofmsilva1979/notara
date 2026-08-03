@@ -34,7 +34,10 @@ def _band_energy(y: np.ndarray, sr: int, lo: int, hi: int, start_sample: int) ->
 def _classify_onset(y: np.ndarray, sr: int, sample: int) -> str:
     kick = _band_energy(y, sr, KICK_LO, KICK_HI, sample)
     snare = _band_energy(y, sr, SNARE_LO, SNARE_HI, sample)
-    hihat = _band_energy(y, sr, HIHAT_LO, sr // 2, sample)
+    if sr // 2 <= HIHAT_LO:
+        hihat = 0.0  # hi-hat band unreachable at this sample rate
+    else:
+        hihat = _band_energy(y, sr, HIHAT_LO, sr // 2, sample)
     dominant = max(kick, snare, hihat)
     if dominant == kick:
         return "K"
@@ -52,29 +55,36 @@ def _build_grid(
                   for inst in ("K", "S", "H")}
     for t, label in zip(onsets_sec, labels):
         bar_idx = int(t / bar_sec)
-        if bar_idx >= n_bars:
+        if bar_idx < 0 or bar_idx >= n_bars:
             continue
         pos_in_bar = (t % bar_sec) / bar_sec
-        slot = int(round(pos_in_bar * GRID_SUBDIVISIONS))
+        slot = int(pos_in_bar * GRID_SUBDIVISIONS)  # floor — musically cleaner
         slot = min(slot, GRID_SUBDIVISIONS - 1)
         grid[label][bar_idx][slot] = "●"
     return grid
 
 
 def _ascii_pattern(grid: dict) -> str:
+    n_bars = len(grid["K"])
     header = "Beat:  1    +    2    +    3    +    4    +"
-    lines = [header]
-    for inst, prefix in (("K", "K:"), ("S", "S:"), ("H", "HH:")):
-        row = grid[inst][0]
-        cells = [f"{c:<5}" for c in row]
-        lines.append(f"{prefix:<6}" + "".join(cells))
+    lines = []
+    for bar_idx in range(n_bars):
+        lines.append(f"Bar {bar_idx + 1}: {header}")
+        for inst, prefix in (("K", "K:"), ("S", "S:"), ("H", "HH:")):
+            row = grid[inst][bar_idx]
+            cells = [f"{c:<5}" for c in row]
+            lines.append(f"  {prefix:<6}" + "".join(cells))
+        if bar_idx < n_bars - 1:
+            lines.append("")
     return "\n".join(lines)
 
 
 def _pattern_description(grid: dict, tempo: float) -> str:
-    k_slots = [i for i, c in enumerate(grid["K"][0]) if c == "●"]
-    s_slots = [i for i, c in enumerate(grid["S"][0]) if c == "●"]
-    h_slots = [i for i, c in enumerate(grid["H"][0]) if c == "●"]
+    n_bars = len(grid["K"])
+    # Aggregate hits across all bars for the pattern description
+    k_slots = [i for bar_idx in range(n_bars) for i, c in enumerate(grid["K"][bar_idx]) if c == "●"]
+    s_slots = [i for bar_idx in range(n_bars) for i, c in enumerate(grid["S"][bar_idx]) if c == "●"]
+    h_slots = [i for bar_idx in range(n_bars) for i, c in enumerate(grid["H"][bar_idx]) if c == "●"]
 
     parts = [f"4/4 · {tempo:.0f} BPM"]
     if k_slots:
@@ -83,7 +93,7 @@ def _pattern_description(grid: dict, tempo: float) -> str:
     if s_slots:
         beats = sorted({i // 2 + 1 for i in s_slots})
         parts.append("snare on " + "&".join(str(b) for b in beats))
-    h_count = len(h_slots)
+    h_count = len(h_slots) // n_bars  # average per bar
     if h_count >= 6:
         parts.append("hi-hat 8ths")
     elif h_count >= 3:
