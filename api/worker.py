@@ -22,6 +22,8 @@ from pipeline import drum_summary as drum_summary_mod
 from pipeline import piano_tab as piano_tab_mod
 from pipeline.midi_export import export_midi
 from pipeline.pdf_export import export_pdf
+from pipeline.lyrics_align import align_lyrics as _align_lyrics
+from pipeline.pdf_export import export_lyrics_pdf as _export_lyrics_pdf
 from pipeline.separation import DEMUCS_MODEL
 
 from . import jobs as job_store
@@ -44,6 +46,8 @@ def _count_steps(params: Dict[str, Any]) -> int:
     if params["drum_summary"]:
         base += 1
     if params["keys_tab"]:
+        base += 1
+    if params.get("lyrics_raw"):
         base += 1
     return base
 
@@ -229,6 +233,22 @@ def run_job(job_id: str, params: Dict[str, Any]) -> None:
                 if keys_result["midi_bytes"]:
                     (work_dir / "keys.midi").write_bytes(keys_result["midi_bytes"])
                 results["tabs"]["keys"] = keys_result["text"]
+
+        # Optional: Lyrics chord chart
+        if params.get("lyrics_raw"):
+            step += 1
+            _step(job, step, "Aligning lyrics to audio")
+            stem_dir = work_dir / "stems" / DEMUCS_MODEL / audio_path.stem
+            vocal_path = stem_dir / "vocals.wav"
+            lyrics_chart = _align_lyrics(
+                params["lyrics_raw"],
+                vocal_path,
+                bars,  # List[ChordSegment] — .start and .label used
+            )
+            if lyrics_chart:
+                (work_dir / "lyrics.txt").write_text(lyrics_chart, encoding="utf-8")
+                _export_lyrics_pdf(work_dir / "lyrics.pdf", lyrics_chart)
+                results["tabs"]["lyrics"] = lyrics_chart
 
         job.results = results
         job.status = "done"
