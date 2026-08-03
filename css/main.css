@@ -134,7 +134,7 @@ nav { background: var(--white); border-bottom: 1px solid var(--border); padding:
 .toggle-yes { background: var(--red); border-radius: 5px; padding: 4px 11px; font-size: 9px; color: var(--white); font-weight: 600; cursor: pointer; user-select: none; }
 
 /* TRANSCRIBE BUTTON */
-.btn-transcribe { background: var(--red); color: var(--white); border: none; border-radius: 10px; padding: 14px; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; cursor: pointer; box-shadow: 0 3px 12px rgba(183,28,28,0.28); width: 100%; transition: background 0.15s; }
+.btn-transcribe { background: var(--red); color: var(--white); border: none; border-radius: 10px; padding: 14px; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; cursor: pointer; box-shadow: 0 3px 12px rgba(183,28,28,0.28); width: 100%; transition: background 0.15s; position: sticky; bottom: 0; z-index: 2; }
 .btn-transcribe:hover { background: #8B0000; }
 .btn-transcribe:disabled { background: #ccc; box-shadow: none; cursor: not-allowed; }
 
