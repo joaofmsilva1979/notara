@@ -81,7 +81,7 @@ nav { background: var(--white); border-bottom: 1px solid var(--border); padding:
 .tool-wrapper { display: flex; height: calc(100vh - 52px); min-height: calc(100vh - 52px); }
 
 /* LEFT PANEL */
-.panel-left { width: 42%; min-width: 300px; padding: 24px; border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 14px; background: var(--cream); overflow-y: auto; }
+.panel-left { width: 42%; min-width: 300px; padding: 24px; border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 14px; background: var(--cream); overflow-y: scroll; }
 
 /* RIGHT PANEL */
 .panel-right { flex: 1; padding: 24px; display: flex; flex-direction: column; gap: 14px; background: var(--tab-bg); overflow: hidden; }
@@ -402,6 +402,7 @@ nav { background: var(--white); border-bottom: 1px solid var(--border); padding:
   line-height: 1.5;
   padding: 8px;
   resize: vertical;
+  max-height: 120px;
 }
 
 .lyrics-textarea:focus {
