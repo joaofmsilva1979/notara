@@ -41,6 +41,8 @@ async def create_job(
     vocal_tab: bool = Form(False),
     drum_summary: bool = Form(False),
     keys_tab: bool = Form(False),
+    lyrics_file: Optional[UploadFile] = File(None),
+    lyrics_text: Optional[str] = Form(""),
 ):
     if not file and not youtube_url:
         raise HTTPException(400, "Provide either a file upload or youtube_url")
@@ -75,6 +77,29 @@ async def create_job(
         "drum_summary": drum_summary,
         "keys_tab": keys_tab,
     }
+
+    # Resolve lyrics: file takes priority over pasted text
+    lyrics_raw: Optional[str] = None
+    if lyrics_file and lyrics_file.filename:
+        suffix = Path(lyrics_file.filename).suffix.lower()
+        raw_bytes = await lyrics_file.read()
+        if suffix == ".docx":
+            try:
+                from docx import Document
+                import io as _io
+                doc = Document(_io.BytesIO(raw_bytes))
+                lyrics_raw = "\n".join(p.text for p in doc.paragraphs if p.text.strip())
+            except Exception:
+                lyrics_raw = None
+        else:
+            try:
+                lyrics_raw = raw_bytes.decode("utf-8", errors="replace")
+            except Exception:
+                lyrics_raw = None
+    elif lyrics_text and lyrics_text.strip():
+        lyrics_raw = lyrics_text.strip()
+
+    params["lyrics_raw"] = lyrics_raw
 
     background_tasks.add_task(_worker.run_job, job.job_id, params)
     return {"job_id": job.job_id, "status": "queued"}
@@ -125,13 +150,14 @@ async def download_file(job_id: str, track: str, fmt: str):
         raise HTTPException(404, "Job not found")
     if job.status != "done":
         raise HTTPException(409, "Job not done yet")
-    allowed_tracks = {"guitar1", "guitar2", "bass", "vocals", "keys", "drums"}
+    allowed_tracks = {"guitar1", "guitar2", "bass", "vocals", "keys", "drums", "lyrics"}
     allowed_fmts = {"pdf", "txt", "midi"}
-    drums_only_fmts = {"txt"}
     if track not in allowed_tracks or fmt not in allowed_fmts:
         raise HTTPException(400, "Invalid track or format")
-    if track == "drums" and fmt not in drums_only_fmts:
+    if track == "drums" and fmt not in {"txt"}:
         raise HTTPException(400, "Drums only supports txt format")
+    if track == "lyrics" and fmt not in {"txt", "pdf"}:
+        raise HTTPException(400, "Lyrics supports txt and pdf formats only")
     file_path = job.work_dir / f"{track}.{fmt}"
     if not file_path.exists():
         raise HTTPException(404, f"{track}.{fmt} not available")
