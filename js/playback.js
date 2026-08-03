@@ -108,7 +108,11 @@ function _syncTab() {
 
   // Update chord display
   if (activeIdx >= 0) {
-    chordNow.textContent = _bars[activeIdx].label || '—';
+    const label = _bars[activeIdx].label || '—';
+    if (chordNow.textContent !== label) {
+      chordNow.textContent = label;
+      if (window.updateChordDisplay) window.updateChordDisplay(label);
+    }
     chordNext.textContent = activeIdx + 1 < _bars.length ? _bars[activeIdx + 1].label : '—';
   }
 
