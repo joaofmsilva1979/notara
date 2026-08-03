@@ -166,3 +166,27 @@ nav { background: var(--white); border-bottom: 1px solid var(--border); padding:
 /* PWA INSTALL BUTTON */
 .btn-pwa-install { width: 100%; background: transparent; border: 1px dashed #ccc; color: var(--muted); border-radius: 6px; padding: 7px 14px; font-size: 10px; font-weight: 600; letter-spacing: 1px; cursor: pointer; margin-top: 6px; }
 .btn-pwa-install:hover { border-color: var(--red); color: var(--red); }
+
+/* Keys tab special display */
+.keys-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  gap: 12px;
+}
+.keys-icon {
+  font-size: 48px;
+  opacity: 0.3;
+}
+.keys-message {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.keys-sub {
+  font-size: 12px;
+  color: var(--muted);
+}

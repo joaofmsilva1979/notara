@@ -25,16 +25,16 @@ def _pitch_name(midi_note: int) -> str:
 def _notes_to_text(notes: list, bars: int, tempo: float) -> str:
     if tempo <= 0:
         tempo = 120.0
-    seconds_per_beat = 60.0 / tempo
-    seconds_per_bar = seconds_per_beat * 4
-    lines = [f"Keys — {len(notes)} notes detected — tempo: {tempo:.0f} BPM"]
-    lines.append("-" * 48)
-    for note in sorted(notes, key=lambda n: n.start):
-        bar = int(note.start / seconds_per_bar) + 1
-        beat = ((note.start % seconds_per_bar) / seconds_per_beat) + 1
-        dur = note.end - note.start
-        lines.append(f"  Bar {bar:>3}  Beat {beat:.1f}  {_pitch_name(note.pitch):<4}  ({dur:.2f}s)")
-    return "\n".join(lines)
+    # Find pitch range
+    pitches = sorted({n.pitch for n in notes})
+    lo = _pitch_name(pitches[0]) if pitches else "?"
+    hi = _pitch_name(pitches[-1]) if pitches else "?"
+    return (
+        f"Keys / Piano — {len(notes)} notes detected\n"
+        f"Range: {lo} – {hi}  ·  Tempo: {tempo:.0f} BPM\n"
+        f"\n"
+        f"Download the MIDI file to view and edit in your DAW."
+    )
 
 
 def _notes_to_midi(notes: list, tempo: float) -> bytes:

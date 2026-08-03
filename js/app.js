@@ -255,6 +255,25 @@ function _renderTab(track, data) {
   const text = data.tabs[track] || '';
   tabContent.innerHTML = '';
 
+  if (track === 'keys') {
+    tabContent.innerHTML = '';
+    const box = document.createElement('div');
+    box.className = 'keys-summary';
+    // Parse the first line for the note count
+    const firstLine = text.split('\n')[0] || text;
+    box.innerHTML = `
+      <div class="keys-icon">♩</div>
+      <div class="keys-message">${firstLine}</div>
+      <div class="keys-sub">Download MIDI to open in GarageBand, Ableton, or any DAW.</div>
+    `;
+    tabContent.appendChild(box);
+    // Still show download buttons (already handled below in the function)
+    tabDownloads.innerHTML = '';
+    tabDownloads.appendChild(_dlBtn('↓ MIDI', 'dl-midi', 'keys', 'midi'));
+    tabDownloads.appendChild(_dlBtn('↓ TXT', 'dl-txt', 'keys', 'txt'));
+    return;
+  }
+
   const segments = text.split('\n\n');
   segments.forEach(segment => {
     if (!segment.trim()) return;
