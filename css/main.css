@@ -18,7 +18,7 @@ body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: 
 
 /* NAV */
 nav { background: var(--white); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
-.logo { display: flex; align-items: center; gap: 9px; }
+.logo { display: flex; align-items: center; gap: 9px; color: inherit; text-decoration: none; cursor: pointer; }
 .logo-img { width: 28px; height: 28px; object-fit: contain; }
 .logo-text { font-size: 16px; font-weight: 800; letter-spacing: 3px; }
 .nav-sub { font-size: 11px; color: var(--muted); }
