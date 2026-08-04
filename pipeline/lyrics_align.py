@@ -110,9 +110,9 @@ def align_lyrics(
     if not lyrics_text:
         return ""
     if not _HAS_STABLE_WHISPER:
-        return ""
+        return lyrics_text  # fallback: plain lyrics, no chord alignment
     if not vocal_stem_path.exists():
-        return ""
+        return lyrics_text  # fallback: plain lyrics, no vocal stem
 
     try:
         model = stable_whisper.load_model("small")
