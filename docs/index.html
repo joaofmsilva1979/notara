@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notara — Audio to Guitar Tab</title>
+  <meta name="description" content="Turn any audio file or YouTube link into guitar tabs, bass lines, vocal melody, drum patterns and chord charts. Free, open source, runs on your computer.">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --red: #B71C1C;
+      --red-dark: #8B0000;
+      --red-light: rgba(183,28,28,0.08);
+      --cream: #F8F4F1;
+      --border: #E8E0D8;
+      --text: #1a1a1a;
+      --muted: #777;
+      --white: #fff;
+    }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: var(--cream); color: var(--text); line-height: 1.6; }
+    a { color: var(--red); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* NAV */
+    nav { background: var(--white); border-bottom: 1px solid var(--border); padding: 14px 40px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    .nav-logo { display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--text); }
+    .nav-logo img { width: 26px; height: 26px; object-fit: contain; }
+    .nav-logo-text { font-size: 15px; font-weight: 800; letter-spacing: 3px; }
+    .nav-links { display: flex; gap: 24px; align-items: center; }
+    .nav-links a { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 1px; }
+    .nav-links a:hover { color: var(--red); text-decoration: none; }
+    .nav-btn { background: var(--red); color: var(--white) !important; border-radius: 6px; padding: 7px 16px; font-size: 11px; font-weight: 700; letter-spacing: 1px; }
+    .nav-btn:hover { background: var(--red-dark); }
+
+    /* HERO */
+    .hero { text-align: center; padding: 90px 24px 70px; max-width: 720px; margin: 0 auto; }
+    .hero-badge { display: inline-block; background: var(--red-light); color: var(--red); font-size: 10px; font-weight: 700; letter-spacing: 2px; padding: 5px 14px; border-radius: 20px; margin-bottom: 28px; border: 1px solid rgba(183,28,28,0.2); }
+    .hero h1 { font-size: clamp(36px, 6vw, 58px); font-weight: 900; letter-spacing: -1px; line-height: 1.1; margin-bottom: 20px; }
+    .hero h1 span { color: var(--red); }
+    .hero p { font-size: 17px; color: var(--muted); max-width: 520px; margin: 0 auto 40px; line-height: 1.7; }
+    .hero-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn-primary { background: var(--red); color: var(--white); border: none; border-radius: 8px; padding: 14px 28px; font-size: 13px; font-weight: 700; letter-spacing: 1px; cursor: pointer; text-decoration: none; display: inline-block; transition: background 0.15s; box-shadow: 0 4px 16px rgba(183,28,28,0.25); }
+    .btn-primary:hover { background: var(--red-dark); text-decoration: none; }
+    .btn-secondary { background: var(--white); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 14px 28px; font-size: 13px; font-weight: 600; letter-spacing: 0.5px; cursor: pointer; text-decoration: none; display: inline-block; transition: border-color 0.15s; }
+    .btn-secondary:hover { border-color: var(--red); color: var(--red); text-decoration: none; }
+    .hero-note { margin-top: 16px; font-size: 11px; color: var(--muted); }
+
+    /* DEMO PREVIEW */
+    .preview { background: var(--white); border: 1px solid var(--border); border-radius: 14px; margin: 0 auto 80px; max-width: 860px; overflow: hidden; box-shadow: 0 8px 40px rgba(0,0,0,0.08); }
+    .preview-bar { background: #f0ebe4; padding: 10px 16px; display: flex; gap: 7px; align-items: center; }
+    .preview-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .preview-dot:nth-child(1) { background: #ff5f57; }
+    .preview-dot:nth-child(2) { background: #febc2e; }
+    .preview-dot:nth-child(3) { background: #28c840; }
+    .preview-content { padding: 28px 28px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .preview-tab { background: var(--cream); border-radius: 8px; padding: 16px; font-family: 'Courier New', monospace; font-size: 9px; line-height: 1.8; color: #444; overflow: hidden; }
+    .preview-tab-header { font-size: 8px; color: var(--red); font-weight: 700; margin-bottom: 8px; font-family: inherit; }
+    .preview-comment { color: var(--red); }
+    .preview-chord { color: var(--red); font-weight: 700; }
+
+    /* FEATURES */
+    .section { padding: 70px 24px; max-width: 960px; margin: 0 auto; }
+    .section-label { font-size: 10px; font-weight: 700; color: var(--red); letter-spacing: 2px; text-align: center; margin-bottom: 10px; }
+    .section-title { font-size: clamp(26px, 4vw, 36px); font-weight: 800; text-align: center; margin-bottom: 48px; letter-spacing: -0.5px; }
+    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+    .feature { background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+    .feature-icon { font-size: 22px; margin-bottom: 12px; }
+    .feature-title { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+    .feature-desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+    /* HOW IT WORKS */
+    .how { background: var(--white); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 32px; }
+    .step { text-align: center; }
+    .step-num { width: 40px; height: 40px; background: var(--red); color: var(--white); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; margin: 0 auto 14px; }
+    .step-title { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+    .step-desc { font-size: 12px; color: var(--muted); }
+
+    /* DOWNLOAD */
+    .download { text-align: center; padding: 70px 24px; max-width: 720px; margin: 0 auto; }
+    .download h2 { font-size: clamp(24px, 4vw, 34px); font-weight: 800; margin-bottom: 12px; }
+    .download p { color: var(--muted); font-size: 14px; margin-bottom: 40px; }
+    .download-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .dl-card { background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 22px 16px; text-align: center; text-decoration: none; color: var(--text); transition: border-color 0.15s, box-shadow 0.15s; }
+    .dl-card:hover { border-color: var(--red); box-shadow: 0 4px 16px rgba(183,28,28,0.1); text-decoration: none; color: var(--text); }
+    .dl-card-icon { font-size: 28px; margin-bottom: 10px; }
+    .dl-card-os { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+    .dl-card-sub { font-size: 10px; color: var(--muted); }
+    .dl-install { background: #f5f5f5; border-radius: 8px; padding: 12px 20px; font-family: 'Courier New', monospace; font-size: 12px; color: #333; margin: 0 auto 12px; max-width: 400px; text-align: left; }
+    .dl-note { font-size: 11px; color: var(--muted); }
+
+    /* FOOTER */
+    footer { background: var(--white); border-top: 1px solid var(--border); padding: 28px 40px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .footer-left { font-size: 11px; color: var(--muted); }
+    .footer-links { display: flex; gap: 20px; }
+    .footer-links a { font-size: 11px; color: var(--muted); }
+    .footer-links a:hover { color: var(--red); }
+
+    @media(max-width: 600px) {
+      nav { padding: 12px 20px; }
+      .nav-links { gap: 14px; }
+      .preview-content { grid-template-columns: 1fr; }
+      footer { flex-direction: column; text-align: center; padding: 24px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="#">
+    <img src="../notara-logo.png" alt="Notara">
+    <span class="nav-logo-text">NOTARA</span>
+  </a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#download">Download</a>
+    <a href="https://ko-fi.com/notaratabs" target="_blank">Support</a>
+    <a href="https://github.com/joaofmsilva1979/notara" target="_blank" class="nav-btn">GitHub ↗</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">FREE &amp; OPEN SOURCE</div>
+  <h1>Turn audio into<br><span>guitar tabs.</span></h1>
+  <p>Drop any audio file or YouTube link. Get guitar tabs, bass lines, vocal melody, drum patterns, and chord charts — in seconds, on your computer.</p>
+  <div class="hero-btns">
+    <a href="#download" class="btn-primary">↓ Download Free</a>
+    <a href="https://github.com/joaofmsilva1979/notara" target="_blank" class="btn-secondary">View on GitHub</a>
+  </div>
+  <p class="hero-note">No account. No subscription. No audio sent anywhere.</p>
+</div>
+
+<!-- PREVIEW -->
+<div style="padding: 0 24px 0; max-width: 900px; margin: 0 auto;">
+<div class="preview">
+  <div class="preview-bar">
+    <div class="preview-dot"></div>
+    <div class="preview-dot"></div>
+    <div class="preview-dot"></div>
+  </div>
+  <div class="preview-content">
+    <div class="preview-tab">
+      <div class="preview-tab-header">GUITAR 1</div>
+      <span class="preview-comment"># Key: A minor  Tempo: 120 BPM</span><br>
+      <span class="preview-comment"># Tuning: Standard EADGBE</span><br><br>
+      e|---0---2---3---2---0---|<br>
+      B|---1---3---3---3---1---|<br>
+      G|---2---2---0---2---2---|<br>
+      D|---2---0---0---0---2---|<br>
+      A|---0-----------0---0---|<br>
+      E|-----------------------|<br><br>
+      e|---5---5---7---5---3---|<br>
+      B|---5---7---8---7---5---|<br>
+      G|---5---7---7---7---5---|<br>
+      D|---7---7---9---7---5---|<br>
+    </div>
+    <div class="preview-tab">
+      <div class="preview-tab-header">LYRICS + CHORDS</div>
+      <span class="preview-comment">[Verse 1]</span><br>
+      <span class="preview-chord">Am&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;F&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;C</span><br>
+      From the first smile to the first step<br>
+      <span class="preview-chord">&nbsp;&nbsp;G&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Am</span><br>
+      Every moment cherished, every choice<br><br>
+      <span class="preview-comment">[Chorus]</span><br>
+      <span class="preview-chord">C&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;G</span><br>
+      Every laughter, every tear<br>
+      <span class="preview-chord">&nbsp;&nbsp;F&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Am</span><br>
+      I'm here with you, my dear<br>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- FEATURES -->
+<div class="section" id="features">
+  <div class="section-label">WHAT YOU GET</div>
+  <div class="section-title">Everything from one audio file</div>
+  <div class="features">
+    <div class="feature">
+      <div class="feature-icon">🎸</div>
+      <div class="feature-title">Guitar Tab</div>
+      <div class="feature-desc">Full ASCII tab with fret positions, timing, and optional stereo L/R split for multi-guitar songs.</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🎵</div>
+      <div class="feature-title">Bass Tab</div>
+      <div class="feature-desc">4-string bass transcription from the isolated bass stem, exported as tab or MIDI.</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🎤</div>
+      <div class="feature-title">Vocal Melody</div>
+      <div class="feature-desc">Melody line transcribed in guitar octave notation — learn to play the vocal line on guitar.</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🥁</div>
+      <div class="feature-title">Drum Summary</div>
+      <div class="feature-desc">Groove map with kick, snare, hi-hat pattern and tempo detection.</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🎹</div>
+      <div class="feature-title">Keys / MIDI</div>
+      <div class="feature-desc">Keyboard part exported as MIDI — open directly in GarageBand, Ableton, or any DAW.</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">📄</div>
+      <div class="feature-title">Lyrics + Chords</div>
+      <div class="feature-desc">Upload your lyrics and get chord names positioned above the right words. Export as PDF or TXT.</div>
+    </div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="how">
+  <div class="section">
+    <div class="section-label">HOW IT WORKS</div>
+    <div class="section-title">Three steps</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-title">Drop your audio</div>
+        <div class="step-desc">Upload an MP3, WAV, M4A, FLAC, or OGG file — or paste a YouTube URL.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-title">Hit Transcribe</div>
+        <div class="step-desc">Notara separates the stems, detects chords, maps notes to the fretboard. Takes 1–5 minutes.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-title">Download your tabs</div>
+        <div class="step-desc">Export as PDF, TXT, or MIDI. Play back with real-time chord highlighting.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DOWNLOAD -->
+<div class="download" id="download">
+  <h2>Download Notara</h2>
+  <p>Runs entirely on your computer. No internet required after install.<br>Needs Python 3.9+ and ~2 GB RAM.</p>
+
+  <div class="download-grid">
+    <a class="dl-card" href="https://github.com/joaofmsilva1979/notara/releases/latest/download/notara-macos.zip">
+      <div class="dl-card-icon"></div>
+      <div class="dl-card-os">macOS</div>
+      <div class="dl-card-sub">10.15 Catalina or newer</div>
+    </a>
+    <a class="dl-card" href="https://github.com/joaofmsilva1979/notara/releases/latest/download/notara-linux.zip">
+      <div class="dl-card-icon">🐧</div>
+      <div class="dl-card-os">Linux</div>
+      <div class="dl-card-sub">Ubuntu 20.04+ / Debian</div>
+    </a>
+    <a class="dl-card" href="https://github.com/joaofmsilva1979/notara/releases/latest/download/notara-windows.zip">
+      <div class="dl-card-icon">🪟</div>
+      <div class="dl-card-os">Windows</div>
+      <div class="dl-card-sub">Windows 10 / 11</div>
+    </a>
+  </div>
+
+  <p style="font-size:12px; color:var(--muted); margin-bottom: 28px;">
+    Or clone from GitHub and run directly:
+  </p>
+  <div class="dl-install">git clone https://github.com/joaofmsilva1979/notara.git<br>cd notara &amp;&amp; ./install.sh &amp;&amp; ./start.sh</div>
+
+  <p class="dl-note">
+    <a href="https://github.com/joaofmsilva1979/notara/releases" target="_blank">All releases on GitHub ↗</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/joaofmsilva1979/notara#readme" target="_blank">Installation guide ↗</a>
+  </p>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-left">
+    NOTARA · 2026 · Free &amp; Open Source · Made with stubbornness and ♥
+  </div>
+  <div class="footer-links">
+    <a href="https://ko-fi.com/notaratabs" target="_blank">Support on Ko-fi</a>
+    <a href="https://github.com/joaofmsilva1979/notara" target="_blank">GitHub</a>
+    <a href="../index.html">Open App</a>
+  </div>
+</footer>
+
+</body>
+</html>
