@@ -9,8 +9,8 @@ python --version >nul 2>&1
 if %errorlevel% neq 0 (
   echo ERROR: Python not found.
   echo.
-  echo   1. Go to https://python.org/downloads
-  echo   2. Download and run the installer
+  echo   1. Go to https://www.python.org/downloads/release/python-3119/
+  echo   2. Download "Windows installer (64-bit)" for Python 3.11
   echo   3. IMPORTANT: tick "Add Python to PATH" during install
   echo   4. Close this window and run install.bat again
   echo.
@@ -21,6 +21,15 @@ if %errorlevel% neq 0 (
 echo   Python found:
 python --version
 echo.
+
+:: Warn if Python version is too new (3.12+ has issues with some ML packages)
+for /f "tokens=2 delims=." %%a in ('python --version 2^>^&1') do set PYMINOR=%%a
+if %PYMINOR% GEQ 12 (
+  echo WARNING: Python 3.%PYMINOR% detected. Some packages work best with Python 3.11.
+  echo If installation fails, reinstall Python 3.11 from:
+  echo   https://www.python.org/downloads/release/python-3119/
+  echo.
+)
 
 :: Create virtual environment
 echo   Creating virtual environment...
