@@ -1,11 +1,13 @@
 """All API route handlers for Notara."""
 from __future__ import annotations
 
+import importlib.metadata
 import io
-import re
 import shutil
+import sys
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
@@ -22,9 +24,38 @@ _AUDIO_EXTENSIONS = {".mp3", ".wav", ".m4a", ".flac", ".ogg", ".opus"}
 
 MAX_UPLOAD_BYTES = 150 * 1024 * 1024  # 150 MB
 
-YT_PATTERN = re.compile(
-    r'^https?://(www\.)?(youtube\.com/watch\?.*v=[\w-]+|youtu\.be/[\w-]+)'
-)
+_ALLOWED_YT_HOSTS = {"youtube.com", "www.youtube.com", "youtu.be", "www.youtu.be"}
+
+
+def _is_valid_youtube_url(url: str) -> bool:
+    """Strict domain check via urlparse — rejects regex-bypassable variants."""
+    try:
+        p = urlparse(url)
+    except Exception:
+        return False
+    return (
+        p.scheme in ("https", "http")
+        and p.netloc in _ALLOWED_YT_HOSTS
+        and bool(p.path or p.query)
+    )
+
+
+@router.get("/health")
+async def health():
+    _PACKAGES = ["demucs", "basic-pitch", "librosa", "yt-dlp", "fastapi", "torch"]
+    versions = {}
+    for pkg in _PACKAGES:
+        try:
+            versions[pkg] = importlib.metadata.version(pkg)
+        except importlib.metadata.PackageNotFoundError:
+            versions[pkg] = "NOT INSTALLED"
+    yt_dlp_path = shutil.which("yt-dlp")
+    return {
+        "status": "ok",
+        "python": sys.version,
+        "packages": versions,
+        "yt_dlp_in_path": yt_dlp_path or "NOT FOUND",
+    }
 
 
 @router.post("/jobs")
@@ -47,7 +78,7 @@ async def create_job(
     if not file and not youtube_url:
         raise HTTPException(400, "Provide either a file upload or youtube_url")
 
-    if youtube_url and not YT_PATTERN.match(youtube_url):
+    if youtube_url and not _is_valid_youtube_url(youtube_url):
         raise HTTPException(status_code=400, detail="Invalid YouTube URL.")
 
     job = job_store.create_job()

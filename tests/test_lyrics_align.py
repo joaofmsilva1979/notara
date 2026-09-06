@@ -57,7 +57,8 @@ def test_align_lyrics_empty_input(tmp_path):
 
 
 def test_align_lyrics_missing_stem(tmp_path):
-    assert align_lyrics("Hello world", tmp_path / "missing.wav", []) == ""
+    # No vocal stem → graceful fallback: return plain lyrics without chord positions
+    assert align_lyrics("Hello world", tmp_path / "missing.wav", []) == "Hello world"
 
 
 def test_align_lyrics_no_stable_whisper(monkeypatch, tmp_path):
@@ -65,7 +66,8 @@ def test_align_lyrics_no_stable_whisper(monkeypatch, tmp_path):
     monkeypatch.setattr(la, "_HAS_STABLE_WHISPER", False)
     dummy = tmp_path / "vocals.wav"
     dummy.touch()
-    assert la.align_lyrics("Hello world", dummy, []) == ""
+    # stable_whisper not installed → graceful fallback: return plain lyrics without alignment
+    assert la.align_lyrics("Hello world", dummy, []) == "Hello world"
 
 
 def test_char_pos_at_line_end_clamped():

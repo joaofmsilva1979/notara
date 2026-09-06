@@ -11,11 +11,13 @@ from typing import Any, Dict, Optional
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import librosa
+import numpy as np
 
 from pipeline import (
-    chord_detection, fretboard, key_detection,
+    chord_detection, chord_detection_btc, fretboard, key_detection,
     separation, tab_render, transcription,
 )
+from pipeline import transcription_synthtab
 from pipeline import tuning as tuning_mod
 from pipeline import vocal_tab as vocal_tab_mod
 from pipeline import drum_summary as drum_summary_mod
@@ -67,11 +69,18 @@ def run_job(job_id: str, params: Dict[str, Any]) -> None:
             step += 1
             _step(job, step, "Downloading from YouTube")
             audio_path = work_dir / "audio.mp3"
-            subprocess.run(
-                ["yt-dlp", "-x", "--audio-format", "mp3",
+            yt_result = subprocess.run(
+                [sys.executable, "-m", "yt_dlp",
+                 "--extractor-args", "youtube:player_client=android",
+                 "--use-extractors", "youtube",  # block SSRF via non-YouTube extractors
+                 "--no-playlist",                 # reject playlist URLs
+                 "-x", "--audio-format", "mp3",
                  "-o", str(audio_path), params["youtube_url"]],
-                check=True,
+                check=False, stderr=subprocess.PIPE, text=True,
             )
+            if yt_result.returncode != 0:
+                err_tail = (yt_result.stderr or "").strip()[-2000:]
+                raise RuntimeError(f"yt-dlp failed (exit {yt_result.returncode}).\n{err_tail}")
             params["audio_path"] = audio_path
             job.total_steps += 1  # account for download step
 
@@ -83,8 +92,9 @@ def run_job(job_id: str, params: Dict[str, Any]) -> None:
         if params["multi_guitar"]:
             guitar1_path, guitar2_path, bass_path, harmonic_path = \
                 separation.separate_guitars(audio_path, work_dir)
+            guitar_stem_path = guitar1_path  # best available clean guitar signal
         else:
-            harmonic_path, bass_path = separation.separate(audio_path, work_dir)
+            harmonic_path, bass_path, guitar_stem_path = separation.separate(audio_path, work_dir)
             guitar1_path = harmonic_path
             guitar2_path = None
 
@@ -96,7 +106,7 @@ def run_job(job_id: str, params: Dict[str, Any]) -> None:
             guitar_tuning = tuning_mod.find_tuning(tuning_mod.STANDARD_E_A_D_G_B_E)
         else:
             guitar_tuning = tuning_mod.find_tuning(guitar_tuning_name)
-        notes1 = transcription.transcribe(guitar1_path)
+        notes1 = transcription_synthtab.transcribe(guitar1_path)
 
         # Auto-detect tuning if "auto"
         if guitar_tuning_name == "auto":
@@ -107,7 +117,10 @@ def run_job(job_id: str, params: Dict[str, Any]) -> None:
         # Step: Key + Chords
         step += 1
         _step(job, step, "Detecting key & chords")
+        # Use harmonic mix (guitar+other) for key detection — richer tonal context.
+        # Use isolated guitar stem for chord detection — cleaner chroma, no vocal/synth bleed.
         y, sr = librosa.load(str(harmonic_path), sr=None, mono=True)
+        y_guitar, sr_guitar = librosa.load(str(guitar_stem_path), sr=None, mono=True)
         bass_y, bass_sr = librosa.load(str(bass_path), sr=None, mono=True)
         key_est = key_detection.detect_key(y, sr)
 
@@ -119,7 +132,30 @@ def run_job(job_id: str, params: Dict[str, Any]) -> None:
                     tonic=parts[0], mode=parts[1], correlation=1.0
                 )
 
-        bars, tempo = chord_detection.detect_chords(y, sr, bass_y, bass_sr, key_est)
+        # Beat-track to get bar timing + tempo (chroma labels are overwritten by BTC below)
+        bars_raw, tempo = chord_detection.detect_chords(
+            y_guitar, sr_guitar, bass_y, bass_sr, key_est, notes=notes1
+        )
+
+        # BTC neural chord recognition on the FULL MIX — BTC was trained on
+        # full-mix audio so feeding it a separated stem degrades accuracy.
+        bass_harmonic, _ = librosa.effects.hpss(bass_y)
+        bass_chroma = librosa.feature.chroma_cens(y=bass_harmonic, sr=bass_sr)
+        bass_chroma_times = librosa.frames_to_time(np.arange(bass_chroma.shape[1]), sr=bass_sr)
+        # Guitar stem chroma for extension detection (9ths, 7ths, etc.) —
+        # cleaner than full mix: no bass/drum bleed.
+        guitar_harmonic, _ = librosa.effects.hpss(y_guitar)
+        guitar_chroma = librosa.feature.chroma_cens(y=guitar_harmonic, sr=sr_guitar)
+        guitar_chroma_times = librosa.frames_to_time(np.arange(guitar_chroma.shape[1]), sr=sr_guitar)
+        # bars = bar-aligned (for tab notation)
+        # chord_events = frame-level chord changes (for frontend playback display)
+        bars, chord_events = chord_detection_btc.detect_chords_btc(
+            audio_path, bars_raw,
+            bass_chroma=bass_chroma,
+            bass_chroma_times=bass_chroma_times,
+            guitar_chroma=guitar_chroma,
+            guitar_chroma_times=guitar_chroma_times,
+        )
 
         # Step: Fretboard + render Guitar 1
         step += 1
@@ -144,10 +180,12 @@ def run_job(job_id: str, params: Dict[str, Any]) -> None:
             "key": str(key_est),
             "tempo": round(tempo, 1),
             "tuning": guitar_tuning.name,
+            # chord_events: frame-level precision (fires at actual chord changes,
+            # not bar-grid) — drives the frontend NOW/NEXT/AFTER display and timeline.
             "bars": [
                 {"label": b.label, "start_sec": round(b.start, 3),
                  "end_sec": round(b.end, 3)}
-                for b in bars
+                for b in chord_events
             ],
         }
 
@@ -155,7 +193,7 @@ def run_job(job_id: str, params: Dict[str, Any]) -> None:
         if params["multi_guitar"] and guitar2_path:
             step += 1
             _step(job, step, "Transcribing Guitar 2")
-            notes2 = transcription.transcribe(guitar2_path)
+            notes2 = transcription_synthtab.transcribe(guitar2_path)
             fretted2 = fretboard.map_notes_to_fretboard(notes2, guitar_tuning)
             tab2_web = tab_render.render_tab(
                 bars, fretted2, key_est, tempo, audio_path.name, guitar_tuning, bars_per_line=1

@@ -100,11 +100,14 @@ def align_lyrics(
     vocal_stem_path: Path,
     chord_events: list,  # List[ChordSegment] with .start (float) and .label (str)
 ) -> str:
-    """Return a formatted chord chart string, or empty string on failure.
+    """Return a formatted chord chart string with chord labels above each line.
 
-    On ImportError (stable_whisper not installed): returns "".
-    On missing vocal stem: returns "".
-    On alignment failure: returns plain lyrics without chord positions.
+    Graceful fallbacks (all return plain lyrics without chord positions):
+    - stable_whisper not installed
+    - vocal stem file missing
+    - alignment failure
+
+    Returns empty string only when lyrics_text is empty.
     """
     lyrics_text = lyrics_text.strip()
     if not lyrics_text:
