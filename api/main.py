@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -12,6 +13,7 @@ from . import jobs
 from .routes import router
 
 _FRONTEND_DIR = Path(__file__).parent.parent
+_log = logging.getLogger(__name__)
 
 limiter = Limiter(key_func=get_remote_address, default_limits=["100/hour"])
 
@@ -19,6 +21,23 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["100/hour"])
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     jobs.cleanup_expired()
+
+    # Warm-load ML models so first job pays no cold-start penalty.
+    # Import inside lifespan — these modules are optional and must not crash startup.
+    try:
+        from pipeline import chord_detection_btc
+        chord_detection_btc._load_model()
+        _log.info("BTC model loaded")
+    except Exception as exc:
+        _log.warning("BTC model not available: %s — will fall back to legacy chords", exc)
+
+    try:
+        from pipeline import transcription_synthtab
+        transcription_synthtab._load()
+        _log.info("SynthTab model loaded")
+    except Exception as exc:
+        _log.warning("SynthTab model not available: %s — will fall back to basic-pitch", exc)
+
     yield
 
 
