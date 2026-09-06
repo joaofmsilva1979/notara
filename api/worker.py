@@ -63,6 +63,7 @@ def run_job(job_id: str, params: Dict[str, Any]) -> None:
         work_dir: Path = job.work_dir
         job.total_steps = _count_steps(params)
         step = 0
+        fallback_notes: list[str] = []
 
         # YouTube download
         if params.get("youtube_url"):
@@ -106,7 +107,11 @@ def run_job(job_id: str, params: Dict[str, Any]) -> None:
             guitar_tuning = tuning_mod.find_tuning(tuning_mod.STANDARD_E_A_D_G_B_E)
         else:
             guitar_tuning = tuning_mod.find_tuning(guitar_tuning_name)
-        notes1 = transcription_synthtab.transcribe(guitar1_path)
+        try:
+            notes1 = transcription_synthtab.transcribe(guitar1_path)
+        except Exception as exc:
+            fallback_notes.append(f"fallback basic-pitch g1: {type(exc).__name__}")
+            notes1 = transcription.transcribe(guitar1_path)
 
         # Auto-detect tuning if "auto"
         if guitar_tuning_name == "auto":
@@ -149,13 +154,18 @@ def run_job(job_id: str, params: Dict[str, Any]) -> None:
         guitar_chroma_times = librosa.frames_to_time(np.arange(guitar_chroma.shape[1]), sr=sr_guitar)
         # bars = bar-aligned (for tab notation)
         # chord_events = frame-level chord changes (for frontend playback display)
-        bars, chord_events = chord_detection_btc.detect_chords_btc(
-            audio_path, bars_raw,
-            bass_chroma=bass_chroma,
-            bass_chroma_times=bass_chroma_times,
-            guitar_chroma=guitar_chroma,
-            guitar_chroma_times=guitar_chroma_times,
-        )
+        try:
+            bars, chord_events = chord_detection_btc.detect_chords_btc(
+                audio_path, bars_raw,
+                bass_chroma=bass_chroma,
+                bass_chroma_times=bass_chroma_times,
+                guitar_chroma=guitar_chroma,
+                guitar_chroma_times=guitar_chroma_times,
+            )
+        except Exception as exc:
+            fallback_notes.append(f"fallback legacy chords: {type(exc).__name__}")
+            bars = bars_raw
+            chord_events = bars_raw
 
         # Step: Fretboard + render Guitar 1
         step += 1
@@ -193,7 +203,11 @@ def run_job(job_id: str, params: Dict[str, Any]) -> None:
         if params["multi_guitar"] and guitar2_path:
             step += 1
             _step(job, step, "Transcribing Guitar 2")
-            notes2 = transcription_synthtab.transcribe(guitar2_path)
+            try:
+                notes2 = transcription_synthtab.transcribe(guitar2_path)
+            except Exception as exc:
+                fallback_notes.append(f"fallback basic-pitch g2: {type(exc).__name__}")
+                notes2 = transcription.transcribe(guitar2_path)
             fretted2 = fretboard.map_notes_to_fretboard(notes2, guitar_tuning)
             tab2_web = tab_render.render_tab(
                 bars, fretted2, key_est, tempo, audio_path.name, guitar_tuning, bars_per_line=1
@@ -291,7 +305,9 @@ def run_job(job_id: str, params: Dict[str, Any]) -> None:
         job.results = results
         job.status = "done"
         job.step = job.total_steps
-        job.step_label = "Done"
+        job.step_label = (
+            "Done [" + "; ".join(fallback_notes) + "]" if fallback_notes else "Done"
+        )
 
     except Exception as exc:
         job.status = "error"
