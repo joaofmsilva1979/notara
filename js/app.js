@@ -118,6 +118,18 @@ _setupToggle('vocal', 'vocal');
 _setupToggle('drums', 'drums');
 _setupToggle('keys', 'keys');
 
+// Hide tuning hint when user picks a non-default (non-auto) tuning
+document.getElementById('opt-tuning')?.addEventListener('change', e => {
+  const hint = document.getElementById('tuning-hint');
+  if (hint) hint.style.display = e.target.value === 'auto' ? '' : 'none';
+});
+
+// Hide key hint when user picks a specific key
+document.getElementById('opt-key')?.addEventListener('change', e => {
+  const hint = document.getElementById('key-hint');
+  if (hint) hint.style.display = e.target.value === 'auto' ? '' : 'none';
+});
+
 // ── Lyrics section ────────────────────────────────────────────
 lyricsToggle.addEventListener('click', () => {
   const open = lyricsBody.style.display !== 'none';

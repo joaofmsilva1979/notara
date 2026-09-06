@@ -493,3 +493,10 @@ nav { background: var(--white); border-bottom: 1px solid var(--border); padding:
   color: #222;
   white-space: pre;
 }
+
+.option-hint {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin: 2px 0 0 0;
+  line-height: 1.4;
+}
