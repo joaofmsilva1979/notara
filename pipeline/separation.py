@@ -44,7 +44,12 @@ def _run_demucs(audio_path: Path, out_dir: Path, device: str) -> Path:
         "-o", str(out_dir),
         str(audio_path),
     ]
-    subprocess.run(cmd, check=True)
+    result = subprocess.run(cmd, check=False, stderr=subprocess.PIPE, text=True)
+    if result.returncode != 0:
+        err_tail = (result.stderr or "").strip()[-2000:]
+        raise RuntimeError(
+            f"Demucs failed (exit {result.returncode}).\n{err_tail}"
+        )
     stem_dir = out_dir / DEMUCS_MODEL / audio_path.stem
     if not stem_dir.exists():
         raise FileNotFoundError(f"Demucs did not produce expected output at {stem_dir}")
@@ -82,8 +87,8 @@ def _combine_stems(stem_dir: Path, work_dir: Path) -> Path:
     return harmonic_path
 
 
-def separate(audio_path: Path, work_dir: Path, device: str = "cpu") -> tuple[Path, Path]:
-    """Run Demucs and return (harmonic_mix_path, bass_stem_path)."""
+def separate(audio_path: Path, work_dir: Path, device: str = "cpu") -> tuple[Path, Path, Path]:
+    """Run Demucs and return (harmonic_mix_path, bass_stem_path, guitar_stem_path)."""
     out_dir = work_dir / "stems"
     stem_dir = _run_demucs(audio_path, out_dir, device)
 
@@ -91,8 +96,12 @@ def separate(audio_path: Path, work_dir: Path, device: str = "cpu") -> tuple[Pat
     if not bass_stem_path.exists():
         raise FileNotFoundError(f"Demucs did not produce a bass stem at {bass_stem_path}")
 
+    guitar_stem_path = stem_dir / "guitar.wav"
+    if not guitar_stem_path.exists():
+        raise FileNotFoundError(f"Demucs did not produce a guitar stem at {guitar_stem_path}")
+
     harmonic_path = _combine_stems(stem_dir, work_dir)
-    return harmonic_path, bass_stem_path
+    return harmonic_path, bass_stem_path, guitar_stem_path
 
 
 def separate_guitars(

@@ -81,17 +81,16 @@ BEATS_PER_BAR = 4  # assumes 4/4 time (see module docstring)
 # pitch class for that pitch class to be treated as a forced chord root.
 # Heuristic/tunable, like CHORD_TOLERANCE elsewhere in this pipeline -- not
 # derived from any formal model.
-BASS_CLARITY_THRESHOLD = 0.35
+BASS_CLARITY_THRESHOLD = 0.38
 
-# Additive score bonus (on the [0, 1] cosine-similarity scale) given to a
-# chord template whose root is diatonic to the detected song key, applied
-# only when the bass didn't give a clear/forced root for that bar.
-DIATONIC_BONUS = 0.03
+# Kept very small — a large bonus was biasing chord detection toward "expected"
+# diatonic chords even when the audio clearly said something else.
+DIATONIC_BONUS = 0.005
 
 # Maximum score gap (cosine-similarity scale) for hysteresis smoothing to
 # keep the previous bar's label instead of switching to the current bar's
 # own (different) winning label.
-HYSTERESIS_MARGIN = 0.05
+HYSTERESIS_MARGIN = 0.04
 
 MAJOR_SCALE_INTERVALS = [0, 2, 4, 5, 7, 9, 11]
 MINOR_SCALE_INTERVALS = [0, 2, 3, 5, 7, 8, 10]  # natural minor
@@ -213,9 +212,32 @@ def _smooth_labels(bar_results: List[BarResult], margin: float = HYSTERESIS_MARG
     return labels
 
 
+def _notes_to_pc_weights(notes: list, start: float, end: float) -> np.ndarray:
+    """Build a 12-bin pitch-class weight vector from notes active in [start, end].
+
+    Each note contributes weight = overlap_duration * velocity, so long sustained
+    notes and loud notes both count more — which is what matters for chord identity.
+    """
+    pc_weights = np.zeros(12)
+    for n in notes:
+        overlap = min(n.end, end) - max(n.start, start)
+        if overlap <= 0:
+            continue
+        pc_weights[int(n.pitch) % 12] += overlap * float(n.velocity)
+    return pc_weights
+
+
 def detect_chords(y: np.ndarray, sr: int, bass_y: Optional[np.ndarray] = None,
                    bass_sr: Optional[int] = None,
-                   key_estimate: Optional[KeyEstimate] = None) -> tuple[List[ChordSegment], float]:
+                   key_estimate: Optional[KeyEstimate] = None,
+                   notes: Optional[list] = None) -> tuple[List[ChordSegment], float]:
+    """Detect chords.
+
+    When `notes` (from basic-pitch transcription of the guitar stem) are provided,
+    chord quality is derived from the actual detected pitches — far more accurate
+    than chroma template matching. Bass chroma is still used for root forcing.
+    When notes are absent, falls back to chroma template matching.
+    """
     tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr, units="frames")
     beat_times = librosa.frames_to_time(beat_frames, sr=sr)
 
@@ -223,13 +245,16 @@ def detect_chords(y: np.ndarray, sr: int, bass_y: Optional[np.ndarray] = None,
         duration = librosa.get_duration(y=y, sr=sr)
         beat_times = np.linspace(0, duration, num=max(2, int(duration)))
 
-    chroma = librosa.feature.chroma_cqt(y=y, sr=sr)
+    # Chroma is still used for fallback bars (no notes) and for bass root forcing.
+    y_harmonic, _ = librosa.effects.hpss(y)
+    chroma = librosa.feature.chroma_cens(y=y_harmonic, sr=sr)
     chroma_times = librosa.frames_to_time(np.arange(chroma.shape[1]), sr=sr)
 
     bass_chroma = None
     bass_chroma_times = None
     if bass_y is not None:
-        bass_chroma = librosa.feature.chroma_cqt(y=bass_y, sr=bass_sr)
+        bass_harmonic, _ = librosa.effects.hpss(bass_y)
+        bass_chroma = librosa.feature.chroma_cens(y=bass_harmonic, sr=bass_sr)
         bass_chroma_times = librosa.frames_to_time(np.arange(bass_chroma.shape[1]), sr=bass_sr)
 
     diatonic_roots = _diatonic_roots(key_estimate) if key_estimate is not None else None
@@ -244,11 +269,22 @@ def detect_chords(y: np.ndarray, sr: int, bass_y: Optional[np.ndarray] = None,
         start, end = bar_bounds[i], bar_bounds[i + 1]
         if end <= start:
             continue
-        mask = (chroma_times >= start) & (chroma_times < end)
-        if not np.any(mask):
-            continue
-        bar_chroma = chroma[:, mask].mean(axis=1)
 
+        # ── Choose chord evidence source ──────────────────────────────────────
+        if notes is not None:
+            bar_vec = _notes_to_pc_weights(notes, start, end)
+            used_notes = bar_vec.sum() > 0
+        else:
+            used_notes = False
+
+        if not used_notes:
+            # Fallback: chroma from audio
+            mask = (chroma_times >= start) & (chroma_times < end)
+            if not np.any(mask):
+                continue
+            bar_vec = chroma[:, mask].mean(axis=1)
+
+        # ── Bass root forcing (still from bass chroma) ────────────────────────
         forced_root = None
         if bass_chroma is not None:
             bass_mask = (bass_chroma_times >= start) & (bass_chroma_times < end)
@@ -257,13 +293,13 @@ def detect_chords(y: np.ndarray, sr: int, bass_y: Optional[np.ndarray] = None,
                 forced_root = _bass_root_pitch_class(bar_bass_chroma)
 
         if forced_root is not None:
-            label, score = _best_chord(bar_chroma, forced_root=forced_root)
+            label, score = _best_chord(bar_vec, forced_root=forced_root)
         else:
-            label, score = _best_chord(bar_chroma, diatonic_roots=diatonic_roots)
+            label, score = _best_chord(bar_vec, diatonic_roots=diatonic_roots)
 
         bar_results.append(BarResult(label=label, score=score,
                                       root_forced=forced_root is not None,
-                                      chroma=bar_chroma))
+                                      chroma=bar_vec))
         bar_indices.append(i)
 
     smoothed_labels = _smooth_labels(bar_results)

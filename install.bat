@@ -52,6 +52,21 @@ if %errorlevel% neq 0 (
   exit /b 1
 )
 
+:: Check ffmpeg (required by yt-dlp for YouTube downloads)
+ffmpeg -version >nul 2>&1
+if %errorlevel% neq 0 (
+  echo.
+  echo   WARNING: ffmpeg not found - YouTube downloads will not work.
+  echo   To fix this:
+  echo     1. Go to https://www.gyan.dev/ffmpeg/builds/
+  echo     2. Download "ffmpeg-release-essentials.zip"
+  echo     3. Extract it and copy ffmpeg.exe to this folder
+  echo        (same folder as install.bat)
+  echo.
+) else (
+  echo   ffmpeg found - YouTube downloads enabled.
+)
+
 echo.
 echo   ────────────────────────────────────────
 echo   Installation complete!

@@ -1,20 +1,30 @@
-/* Notara — playback bar + synchronized tab highlight */
+/* Notara — playback, chord trinity, timeline */
 
 let _audio = null;
 let _bars = [];
 let _rafId = null;
 let _initialized = false;
 let _tabBarCache = null;
-let _transposeSteps = 0;  // semitones offset from original
+let _transposeSteps = 0;
 let _speed = 1.0;
+let _lastActiveIdx = -2;  // -2 = force first update
 
 const playBtn     = document.getElementById('play-btn');
 const playIcon    = document.getElementById('play-icon');
 const scrubber    = document.getElementById('scrubber');
 const scrubFill   = document.getElementById('scrubber-fill');
 const timeDisplay = document.getElementById('time-display');
-const chordNow    = document.getElementById('chord-now');
-const chordNext   = document.getElementById('chord-next');
+
+// Trinity elements
+const elBefore = document.getElementById('chord-before');
+const elNow    = document.getElementById('chord-now');
+const elNext   = document.getElementById('chord-next');
+const elAfter  = document.getElementById('chord-after');
+const diagBefore = document.getElementById('diag-before');
+const diagNow    = document.getElementById('diag-now');
+const diagNext   = document.getElementById('diag-next');
+const diagAfter  = document.getElementById('diag-after');
+const timeline   = document.getElementById('chord-timeline');
 
 // ── Transpose helpers ────────────────────────────────────────
 const _NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -33,11 +43,9 @@ function _transposeChordName(name, steps) {
 function _shiftTabText(text, steps) {
   if (steps === 0) return text;
   return text.split('\n').map(line => {
-    // Tab string line: starts with note name(s) + pipe, e.g. e|, B|, F#|, G#|
     if (/^[A-Ga-g][#b]?\|/.test(line)) {
       return line.replace(/\d+/g, n => Math.max(0, parseInt(n) + steps).toString());
     }
-    // Chord label line (first non-empty non-comment line of a bar block)
     if (/^[A-G]/.test(line.trim()) && !line.trim().startsWith('#')) {
       return _transposeChordName(line.trim(), steps);
     }
@@ -45,13 +53,61 @@ function _shiftTabText(text, steps) {
   }).join('\n');
 }
 
-function _applyTranspose() {
-  document.querySelectorAll('#tab-content .tab-bar').forEach(el => {
-    if (el.dataset.orig !== undefined) {
-      el.textContent = _shiftTabText(el.dataset.orig, _transposeSteps);
-    }
+// ── Timeline build ───────────────────────────────────────────
+function _buildTimeline() {
+  if (!timeline) return;
+  timeline.innerHTML = '';
+  _bars.forEach((bar, i) => {
+    const pill = document.createElement('button');
+    pill.className = 'chord-pill';
+    pill.textContent = _transposeChordName(bar.label || 'N.C.', _transposeSteps);
+    pill.dataset.idx = i;
+    pill.addEventListener('click', () => {
+      if (_audio) _audio.currentTime = bar.start_sec;
+    });
+    timeline.appendChild(pill);
   });
-  // Transpose chord annotation lines in lyrics tab
+}
+
+function _updateTimeline(activeIdx) {
+  if (!timeline) return;
+  const pills = timeline.querySelectorAll('.chord-pill');
+  pills.forEach((p, i) => {
+    p.classList.remove('active', 'near');
+    if (i === activeIdx) p.classList.add('active');
+    else if (Math.abs(i - activeIdx) <= 2) p.classList.add('near');
+  });
+  // Scroll active pill into view
+  if (activeIdx >= 0 && pills[activeIdx]) {
+    pills[activeIdx].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
+}
+
+// ── Chord diagram render ─────────────────────────────────────
+function _renderDiag(container, chordName, maxVoicings) {
+  if (!container) return;
+  if (!chordName || chordName === '—' || chordName === 'N.C.') {
+    container.innerHTML = '';
+    return;
+  }
+  if (window.getVoicings) {
+    const voicings = window.getVoicings(chordName);
+    if (voicings && window._chordSVG) {
+      container.innerHTML = voicings.slice(0, maxVoicings).map(v =>
+        `<div class="chord-diagram-wrap">${window._chordSVG(v, chordName)}<div class="chord-diagram-label">${v.label||''}</div></div>`
+      ).join('');
+      return;
+    }
+  }
+  container.innerHTML = '';
+}
+
+// ── Apply transpose ──────────────────────────────────────────
+function _applyTranspose() {
+  // Tab content
+  document.querySelectorAll('#tab-content .tab-bar').forEach(el => {
+    if (el.dataset.orig !== undefined) el.textContent = _shiftTabText(el.dataset.orig, _transposeSteps);
+  });
   document.querySelectorAll('.tab-chord-line').forEach(span => {
     const orig = span.dataset.origChordLine || span.textContent;
     span.dataset.origChordLine = orig;
@@ -60,36 +116,54 @@ function _applyTranspose() {
       name => _transposeChordName(name, _transposeSteps)
     );
   });
-  // Update chord display
-  const raw = chordNow.dataset.rawChord || chordNow.textContent;
-  chordNow.dataset.rawChord = raw;
-  const shifted = _transposeChordName(raw, _transposeSteps);
-  chordNow.textContent = shifted;
-  if (window.updateChordDisplay) window.updateChordDisplay(shifted);
-  // Update transpose display
+  // Rebuild timeline with transposed labels
+  _buildTimeline();
+  // Re-sync current display
+  if (_lastActiveIdx >= 0) _updateTrinity(_lastActiveIdx);
+  // Transpose display
   const disp = document.getElementById('tp-display');
-  if (disp) {
-    const semis = _transposeSteps;
-    disp.textContent = semis === 0 ? '0' : (semis > 0 ? `+${semis}` : `${semis}`);
-  }
+  if (disp) disp.textContent = _transposeSteps === 0 ? '0' : (_transposeSteps > 0 ? `+${_transposeSteps}` : `${_transposeSteps}`);
+}
+
+function _barLabel(idx) {
+  if (idx < 0 || idx >= _bars.length) return '—';
+  return _transposeChordName(_bars[idx].label || 'N.C.', _transposeSteps);
+}
+
+function _updateTrinity(activeIdx) {
+  _lastActiveIdx = activeIdx;
+  const before = _barLabel(activeIdx - 1);
+  const now    = _barLabel(activeIdx);
+  const next   = _barLabel(activeIdx + 1);
+  const after  = _barLabel(activeIdx + 2);
+
+  if (elBefore) elBefore.textContent = before;
+  if (elNow)    elNow.textContent    = now;
+  if (elNext)   elNext.textContent   = next;
+  if (elAfter)  elAfter.textContent  = after;
+
+  // Diagrams: 2 voicings for NOW, 1 for NEXT, none for BEFORE/AFTER
+  _renderDiag(diagNow,  now,  2);
+  _renderDiag(diagNext, next, 1);
+  if (diagBefore) diagBefore.innerHTML = '';
+  if (diagAfter)  diagAfter.innerHTML  = '';
+
+  // Legacy support if something calls updateChordDisplay
+  if (window.updateChordDisplay) window.updateChordDisplay(now);
 }
 
 // ── Init ─────────────────────────────────────────────────────
 function initPlayback(audioEl, bars) {
-  chordNow.textContent = chordNext.textContent = '—';
-  chordNow.dataset.rawChord = '—';
-
+  _lastActiveIdx = -2;
   if (_initialized) {
     _audio = audioEl;
     _bars = bars || [];
     _tabBarCache = null;
-    // Reset practice state on new track
     _transposeSteps = 0;
     _speed = 1.0;
     if (_audio) _audio.playbackRate = 1.0;
-    document.querySelectorAll('.speed-btn').forEach(b =>
-      b.classList.toggle('active', b.dataset.speed === '1')
-    );
+    document.querySelectorAll('.speed-btn').forEach(b => b.classList.toggle('active', b.dataset.speed === '1'));
+    _buildTimeline();
     _applyTranspose();
     return;
   }
@@ -97,14 +171,11 @@ function initPlayback(audioEl, bars) {
   _audio = audioEl;
   _bars = bars || [];
   _tabBarCache = null;
-
-  // Reset practice state on first init
   _transposeSteps = 0;
   _speed = 1.0;
   if (_audio) _audio.playbackRate = 1.0;
-  document.querySelectorAll('.speed-btn').forEach(b =>
-    b.classList.toggle('active', b.dataset.speed === '1')
-  );
+  document.querySelectorAll('.speed-btn').forEach(b => b.classList.toggle('active', b.dataset.speed === '1'));
+  _buildTimeline();
   _applyTranspose();
 
   _audio.addEventListener('play',  _onPlay);
@@ -150,11 +221,7 @@ function initPlayback(audioEl, bars) {
 
 function _togglePlay() {
   if (!_audio) return;
-  if (_audio.paused) {
-    _audio.play();
-  } else {
-    _audio.pause();
-  }
+  _audio.paused ? _audio.play() : _audio.pause();
 }
 
 function _onPlay() {
@@ -165,10 +232,7 @@ function _onPlay() {
 function _onPause() {
   playIcon.innerHTML = '';
   playIcon.className = 'play-triangle';
-  if (_rafId) {
-    cancelAnimationFrame(_rafId);
-    _rafId = null;
-  }
+  if (_rafId) { cancelAnimationFrame(_rafId); _rafId = null; }
 }
 
 function _tick() {
@@ -195,54 +259,28 @@ function _syncTab() {
   if (!_audio || !_bars.length) return;
   const t = _audio.currentTime;
 
-  // Find active bar index
   let activeIdx = -1;
   for (let i = 0; i < _bars.length; i++) {
-    if (t >= _bars[i].start_sec && t < _bars[i].end_sec) {
-      activeIdx = i;
-      break;
-    }
+    if (t >= _bars[i].start_sec && t < _bars[i].end_sec) { activeIdx = i; break; }
+  }
+  if (activeIdx === -1 && t >= _bars[_bars.length - 1].end_sec) activeIdx = _bars.length - 1;
+
+  // Only update DOM when bar changes
+  if (activeIdx !== _lastActiveIdx) {
+    if (activeIdx >= 0) _updateTrinity(activeIdx);
+    _updateTimeline(activeIdx);
   }
 
-  // Clamp to last bar at end of track
-  if (activeIdx === -1 && _bars.length > 0 && t >= _bars[_bars.length - 1].end_sec) {
-    activeIdx = _bars.length - 1;
-  }
-
-  // Update chord display
-  if (activeIdx >= 0) {
-    const label = _bars[activeIdx].label || '—';
-    const rawPrev = chordNow.dataset.rawChord || chordNow.textContent;
-    if (rawPrev !== label) {
-      chordNow.dataset.rawChord = label;
-      const shifted = _transposeChordName(label, _transposeSteps);
-      chordNow.textContent = shifted;
-      if (window.updateChordDisplay) window.updateChordDisplay(shifted);
-    }
-    chordNext.textContent = _transposeChordName(
-      activeIdx + 1 < _bars.length ? _bars[activeIdx + 1].label : '—',
-      _transposeSteps
-    );
-  }
-
-  // Highlight tab bar — only for guitar/bass/vocals (not drums)
+  // Tab bar highlight
   const track = window.getActiveTab ? window.getActiveTab() : 'guitar1';
   if (track === 'drums') return;
-
-  if (!_tabBarCache) {
-    _tabBarCache = document.querySelectorAll('#tab-content .tab-bar');
-  }
+  if (!_tabBarCache) _tabBarCache = document.querySelectorAll('#tab-content .tab-bar');
   const tabBars = _tabBarCache;
   if (!tabBars.length) return;
-
   tabBars.forEach((el, i) => {
     el.classList.remove('active', 'dim');
-    if (i === activeIdx) {
-      el.classList.add('active');
-      el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    } else if (activeIdx >= 0) {
-      el.classList.add('dim');
-    }
+    if (i === activeIdx) { el.classList.add('active'); el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+    else if (activeIdx >= 0) el.classList.add('dim');
   });
 }
 

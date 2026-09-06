@@ -261,6 +261,8 @@
 
       <!-- Playback bar -->
       <div class="playback-box">
+
+        <!-- Transport row -->
         <div class="playback-row">
           <button class="play-btn" id="play-btn">
             <div class="play-triangle" id="play-icon"></div>
@@ -270,12 +272,35 @@
           </div>
           <div class="time" id="time-display">0:00 / 0:00</div>
         </div>
-        <div class="chord-now">
-          <span class="chord-label">Now:</span>
-          <span class="chord-pill" id="chord-now">—</span>
-          <span class="chord-next">→ next: <strong id="chord-next">—</strong></span>
+
+        <!-- NOW / NEXT / AFTER chord trinity -->
+        <div class="chord-trinity">
+          <div class="chord-slot slot-before">
+            <div class="slot-label">BEFORE</div>
+            <div class="slot-name" id="chord-before">—</div>
+            <div class="slot-diag" id="diag-before"></div>
+          </div>
+          <div class="chord-slot slot-now">
+            <div class="slot-label">NOW</div>
+            <div class="slot-name" id="chord-now">—</div>
+            <div class="slot-diag" id="diag-now"></div>
+          </div>
+          <div class="chord-slot slot-next">
+            <div class="slot-label">NEXT</div>
+            <div class="slot-name" id="chord-next">—</div>
+            <div class="slot-diag" id="diag-next"></div>
+          </div>
+          <div class="chord-slot slot-after">
+            <div class="slot-label">AFTER</div>
+            <div class="slot-name" id="chord-after">—</div>
+            <div class="slot-diag" id="diag-after"></div>
+          </div>
         </div>
-        <div id="chord-diagrams" class="chord-diagrams"></div>
+
+        <!-- Chord timeline (scrollable pills) -->
+        <div class="chord-timeline-wrap">
+          <div class="chord-timeline" id="chord-timeline"></div>
+        </div>
 
         <!-- Practice controls -->
         <div class="practice-row">

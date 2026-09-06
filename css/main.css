@@ -160,20 +160,90 @@ nav { background: var(--white); border-bottom: 1px solid var(--border); padding:
 
 /* PLAYBACK */
 .playback-box { background: var(--white); border-radius: 10px; border: 1px solid var(--border); padding: 14px 16px; }
-.playback-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-.play-btn { width: 32px; height: 32px; min-width: 32px; background: var(--red); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; }
-.play-triangle { width:0; height:0; border-style:solid; border-width:6px 0 6px 11px; border-color:transparent transparent transparent var(--white); margin-left:2px; }
+.playback-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.play-btn { width: 36px; height: 36px; min-width: 36px; background: var(--red); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; box-shadow: 0 2px 8px rgba(183,28,28,0.30); }
+.play-triangle { width:0; height:0; border-style:solid; border-width:7px 0 7px 13px; border-color:transparent transparent transparent var(--white); margin-left:2px; }
 .pause-bars { display:flex; gap:3px; align-items:center; }
-.pause-bar { width:3px; height:12px; background:var(--white); border-radius:1px; }
-.scrubber { flex:1; cursor:pointer; }
-.scrubber-track { height:4px; background: var(--border); border-radius:2px; }
+.pause-bar { width:3px; height:14px; background:var(--white); border-radius:1px; }
+.scrubber { flex:1; cursor:pointer; padding: 6px 0; }
+.scrubber-track { height:4px; background: var(--border); border-radius:2px; position:relative; }
 .scrubber-fill { width:0%; height:100%; background: var(--red); border-radius:2px; transition: width 0.1s linear; }
 .time { font-size:9px; color: var(--muted); white-space:nowrap; }
-.chord-now { display:flex; align-items:center; gap:8px; }
-.chord-label { font-size:9px; color: var(--muted); }
-.chord-pill { background: var(--red); color: var(--white); border-radius:5px; padding:3px 12px; font-size:12px; font-weight:700; min-width:40px; text-align:center; }
-.chord-next { font-size:9px; color: var(--muted); }
-.chord-next strong { color:#555; }
+
+/* Chord trinity — BEFORE / NOW / NEXT / AFTER */
+.chord-trinity {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr 1fr 1fr;
+  gap: 8px;
+  margin: 4px 0 10px;
+  align-items: start;
+}
+.chord-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.slot-label {
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--dim);
+  text-transform: uppercase;
+}
+.slot-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #555;
+  min-height: 22px;
+  text-align: center;
+}
+.slot-diag { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+/* NOW slot is bigger and highlighted */
+.slot-now .slot-label { color: var(--red); }
+.slot-now .slot-name {
+  font-size: 26px;
+  color: var(--text);
+  background: var(--red);
+  color: var(--white);
+  border-radius: 8px;
+  padding: 4px 18px;
+  min-width: 60px;
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* Chord timeline */
+.chord-timeline-wrap {
+  overflow-x: auto;
+  margin: 0 -4px 10px;
+  padding: 2px 4px 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #ddd transparent;
+}
+.chord-timeline-wrap::-webkit-scrollbar { height: 3px; }
+.chord-timeline-wrap::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
+.chord-timeline {
+  display: flex;
+  gap: 4px;
+  min-width: max-content;
+}
+.chord-pill {
+  background: var(--cream);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #555;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+  user-select: none;
+}
+.chord-pill:hover { border-color: var(--red); color: var(--red); }
+.chord-pill.active { background: var(--red); border-color: var(--red); color: var(--white); }
+.chord-pill.near { border-color: #e0a0a0; color: #8B0000; }
 
 /* RESULTS CONTAINER */
 #state-results { display: flex; flex-direction: column; flex: 1; gap: 14px; min-height: 0; overflow: hidden; }
@@ -256,14 +326,7 @@ nav { background: var(--white); border-bottom: 1px solid var(--border); padding:
   color: var(--muted);
 }
 
-/* Chord diagrams */
-.chord-diagrams {
-  display: flex;
-  gap: 16px;
-  margin-top: 8px;
-  padding: 4px 0;
-  min-height: 0;
-}
+/* Chord diagram wraps inside trinity slots */
 .chord-diagram-wrap {
   display: flex;
   flex-direction: column;
