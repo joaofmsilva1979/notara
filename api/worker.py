@@ -17,7 +17,6 @@ from pipeline import (
     chord_detection, chord_detection_btc, fretboard, key_detection,
     separation, tab_render, transcription,
 )
-from pipeline import transcription_synthtab
 from pipeline import tuning as tuning_mod
 from pipeline import vocal_tab as vocal_tab_mod
 from pipeline import drum_summary as drum_summary_mod
@@ -117,11 +116,9 @@ def run_job(job_id: str, params: Dict[str, Any]) -> None:
             guitar_tuning = tuning_mod.find_tuning(tuning_mod.STANDARD_E_A_D_G_B_E)
         else:
             guitar_tuning = tuning_mod.find_tuning(guitar_tuning_name)
-        try:
-            notes1 = transcription_synthtab.transcribe(guitar1_path)
-        except Exception as exc:
-            fallback_notes.append(f"fallback basic-pitch g1: {type(exc).__name__}")
-            notes1 = transcription.transcribe(guitar1_path)
+        # basic-pitch beats SynthTab on GuitarSet (note F1 76% vs 44%,
+        # tests/benchmark_tab.py e2e) — decision D-17.
+        notes1 = transcription.transcribe(guitar1_path)
 
         # Auto-detect tuning if "auto"
         if guitar_tuning_name == "auto":
@@ -240,11 +237,7 @@ def run_job(job_id: str, params: Dict[str, Any]) -> None:
         if params["multi_guitar"] and guitar2_path:
             step += 1
             _step(job, step, "Transcribing Guitar 2")
-            try:
-                notes2 = transcription_synthtab.transcribe(guitar2_path)
-            except Exception as exc:
-                fallback_notes.append(f"fallback basic-pitch g2: {type(exc).__name__}")
-                notes2 = transcription.transcribe(guitar2_path)
+            notes2 = transcription.transcribe(guitar2_path)
             fretted2 = fretboard.map_notes_to_fretboard(notes2, guitar_tuning)
             tab2_web = tab_render.render_tab(
                 bars, fretted2, key_est, tempo, audio_path.name, guitar_tuning, bars_per_line=1

@@ -24,6 +24,7 @@ if str(_SYNTHTAB_DIR) not in sys.path:
 from amt_tools import tools
 from amt_tools.features import CQT
 
+from .fretboard import FrettedNote
 from .transcription import Note
 
 _MODEL_PATH = _SYNTHTAB_DIR / "pretrained_models" / "SynthTab-Pretrained.pt"
@@ -62,51 +63,44 @@ def _load() -> None:
     )
 
 
-def _tab_to_notes(tab: np.ndarray) -> List[Note]:
-    """Convert (T, 6) fret array to Note events.
+def _tab_to_fretted(tab: np.ndarray) -> List[FrettedNote]:
+    """Convert (T, 6) fret array to string/fret note events.
 
     Merges consecutive frames of the same fret on the same string into one note.
     """
     T, n_strings = tab.shape
     sec_per_frame = _HOP_LENGTH / _SAMPLE_RATE
-    notes: List[Note] = []
+    out: List[FrettedNote] = []
+
+    def _emit(s: int, fret: int, f0: int, f1: int) -> None:
+        start_t, end_t = f0 * sec_per_frame, f1 * sec_per_frame
+        if end_t - start_t >= _MIN_NOTE_SEC:
+            out.append(FrettedNote(string=s, fret=fret, start=start_t, end=end_t,
+                                   pitch=_OPEN_STRING_MIDI[s] + fret))
 
     for s in range(n_strings):
-        open_midi = _OPEN_STRING_MIDI[s]
-        prev_fret = -1
-        note_start = 0
-
+        prev_fret, note_start = -1, 0
         for f in range(T):
             fret = int(tab[f, s])
             if fret != prev_fret:
                 if prev_fret >= 0:
-                    start_t = note_start * sec_per_frame
-                    end_t = f * sec_per_frame
-                    if end_t - start_t >= _MIN_NOTE_SEC:
-                        notes.append(Note(
-                            start=start_t, end=end_t,
-                            pitch=open_midi + prev_fret,
-                            velocity=_MIN_VELOCITY,
-                        ))
+                    _emit(s, prev_fret, note_start, f)
                 if fret >= 0:
                     note_start = f
                 prev_fret = fret
-
         if prev_fret >= 0:
-            start_t = note_start * sec_per_frame
-            end_t = T * sec_per_frame
-            if end_t - start_t >= _MIN_NOTE_SEC:
-                notes.append(Note(
-                    start=start_t, end=end_t,
-                    pitch=open_midi + prev_fret,
-                    velocity=_MIN_VELOCITY,
-                ))
+            _emit(s, prev_fret, note_start, T)
 
-    notes.sort(key=lambda n: n.start)
-    return notes
+    out.sort(key=lambda n: n.start)
+    return out
 
 
-def transcribe(audio_path: Path) -> List[Note]:
+def _tab_to_notes(tab: np.ndarray) -> List[Note]:
+    return [Note(start=n.start, end=n.end, pitch=n.pitch, velocity=_MIN_VELOCITY)
+            for n in _tab_to_fretted(tab)]
+
+
+def transcribe(audio_path: Path, _fretted: bool = False) -> List[Note]:
     """Transcribe guitar audio using SynthTab TabCNN.
 
     Args:
@@ -136,4 +130,10 @@ def transcribe(audio_path: Path) -> List[Note]:
     # (T, 6, 1) → (T, 6)
     tab = result[tools.KEY_TABLATURE].squeeze(-1).cpu().numpy()
 
-    return _tab_to_notes(tab)
+    return _tab_to_notes(tab) if not _fretted else _tab_to_fretted(tab)
+
+
+def transcribe_fretted(audio_path: Path) -> List[FrettedNote]:
+    """Same as transcribe() but keeps SynthTab's own string/fret choice
+    instead of discarding it and re-placing pitches on the neck."""
+    return transcribe(audio_path, _fretted=True)

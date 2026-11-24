@@ -65,3 +65,18 @@ def test_open_strings_always_allowed_regardless_of_window():
     open_e = [fn for fn in fretted if fn.pitch == 40]
     assert len(open_e) == 1
     assert open_e[0].fret == 0
+
+
+def test_dp_open_e_major_chord_is_the_open_shape():
+    from pipeline.fretboard import map_notes_to_fretboard_dp
+    notes = [Note(start=0.0, end=1.0, pitch=p, velocity=1.0) for p in (40, 47, 52, 56, 59, 64)]
+    got = sorted((f.string, f.fret) for f in map_notes_to_fretboard_dp(notes))
+    assert got == [(0, 0), (1, 2), (2, 2), (3, 1), (4, 0), (5, 0)]
+
+
+def test_dp_keeps_a_riff_in_one_position():
+    from pipeline.fretboard import map_notes_to_fretboard_dp
+    notes = [Note(start=i * 0.5, end=i * 0.5 + 0.4, pitch=p, velocity=1.0)
+             for i, p in enumerate((69, 71, 73, 71, 69))]
+    frets = [f.fret for f in map_notes_to_fretboard_dp(notes)]
+    assert max(frets) - min(frets) <= 4

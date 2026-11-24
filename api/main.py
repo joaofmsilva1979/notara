@@ -31,13 +31,6 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         _log.warning("BTC model not available: %s — will fall back to legacy chords", exc)
 
-    try:
-        from pipeline import transcription_synthtab
-        transcription_synthtab._load()
-        _log.info("SynthTab model loaded")
-    except Exception as exc:
-        _log.warning("SynthTab model not available: %s — will fall back to basic-pitch", exc)
-
     yield
 
 
