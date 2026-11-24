@@ -14,7 +14,8 @@ CLI (main.py)  --------------------------------------------------------->  pipel
 - **Frontend**: static files served by the API itself (self-hosted) or by GitHub Pages (landing at `docs/index.html`).
 - **API**: one process, in-memory job store, one background thread per job.
 - **Pipeline**: pure Python functions, no web or job knowledge.
-- **Experimental models**: `pipeline/btc/` and `pipeline/synthtab/` are nested third-party repos (gitlinks, no `.gitmodules`). A fresh clone does not contain them; the app then runs on the legacy engines.
+- **Third-party models**: `pipeline/btc/` and `pipeline/synthtab/` are git submodules (upstream repos). `pipeline/patches/` holds the local compatibility fixes, applied by `install.sh`.
+- **Online engine**: `space/` builds the same API as a Hugging Face Docker Space; the PWA on GitHub Pages calls it.
 
 ## 2. Who owns what
 
@@ -28,7 +29,7 @@ CLI (main.py)  --------------------------------------------------------->  pipel
 | `pipeline/transcription*.py` | Audio → notes |
 | `pipeline/tuning.py` | Tuning catalog and tuning fit |
 | `pipeline/key_detection.py`, `chord_detection*.py` | Key and chords |
-| `pipeline/fretboard.py`, `tab_render.py` | Notes → playable positions → ASCII tab |
+| `pipeline/fretboard.py`, `tab_render.py` | Notes → playable positions (whole-phrase optimisation) → ASCII tab |
 | `pipeline/pdf_export.py`, `midi_export.py` | File outputs |
 | `pipeline/lyrics_align.py` | Lyrics ↔ audio alignment (stable-whisper) |
 | `pipeline/structure_detection.py` | Song sections (intro, verse, chorus...) |
@@ -71,9 +72,9 @@ Upload or YouTube URL
 
 ## 5. What must stay true
 
-1. **User audio never leaves the machine running Notara.** No external API call with audio, lyrics or results. YouTube download is the only outbound fetch, limited to the YouTube extractor.
+1. **User audio only goes to the Notara engine the user chose, and nowhere else.** Self-hosted: it never leaves the machine. Online (GitHub Pages + Hugging Face Space): it is processed on the Space and deleted with the job after 1 h. No third-party API ever receives audio, lyrics or results. YouTube download is the only outbound fetch, limited to the YouTube extractor.
 2. **An experimental or optional step never fails a job.** BTC, SynthTab, lyrics, structure and rehearsal PDF are wrapped with a fallback or skipped.
-3. **A model becomes the default only after it beats the current one on the benchmark** (`tests/benchmark.py`, > 5 points on the reference set). *Not met yet: BTC and SynthTab are the current defaults but the reference set does not exist.*
+3. **A model or algorithm becomes the default only after it beats the current one on a benchmark**: chords `tests/benchmark.py`, tabs `tests/benchmark_tab.py` (GuitarSet, held-out players). *Not met yet: BTC and SynthTab are the current defaults but the reference set does not exist.*
 4. **No persistence.** Jobs live in memory and in a temp dir with a 1 h TTL. No database, no accounts.
 5. **4/4 meter** is assumed everywhere (bars, chord windows, drum grid). Changing it is an architecture change, not a local fix.
 6. **Validation stays server-side** in `api/routes.py`, even when the frontend also checks.

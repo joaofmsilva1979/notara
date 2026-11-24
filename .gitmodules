@@ -1,0 +1,6 @@
+[submodule "pipeline/btc"]
+	path = pipeline/btc
+	url = https://github.com/jayg996/BTC-ISMIR19.git
+[submodule "pipeline/synthtab"]
+	path = pipeline/synthtab
+	url = https://github.com/yongyizang/SynthTab.git

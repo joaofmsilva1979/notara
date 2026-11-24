@@ -24,7 +24,7 @@ Export to PDF, TXT, or MIDI.
 
 **macOS / Linux**
 ```bash
-git clone https://github.com/joaofmsilva1979/notara.git
+git clone --recurse-submodules https://github.com/joaofmsilva1979/notara.git
 cd notara
 chmod +x install.sh start.sh
 ./install.sh
@@ -32,7 +32,7 @@ chmod +x install.sh start.sh
 
 **Windows**
 ```
-git clone https://github.com/joaofmsilva1979/notara.git
+git clone --recurse-submodules https://github.com/joaofmsilva1979/notara.git
 cd notara
 install.bat
 ```

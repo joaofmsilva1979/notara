@@ -18,6 +18,14 @@ if [ "$PY_VER" -lt 9 ]; then
   exit 1
 fi
 
+# ML model sources (BTC chords, SynthTab tab transcription) are git submodules
+if [ -d .git ]; then
+  git submodule update --init pipeline/btc pipeline/synthtab
+  # numpy>=1.24 / PyYAML>=6 compatibility for BTC
+  git -C pipeline/btc apply --check ../patches/btc-compat.patch 2>/dev/null && \
+    git -C pipeline/btc apply ../patches/btc-compat.patch
+fi
+
 # Create virtual environment
 echo "Creating virtual environment..."
 python3 -m venv .venv
