@@ -2,7 +2,28 @@
 
 let _audio = null;
 let _bars = [];
+let _sections = [];
 let _rafId = null;
+
+const _SEC_DISPLAY = { intro: 'INTRO', verse: 'COUPLET', chorus: 'REFRAIN', bridge: 'PONT', outro: 'OUTRO' };
+
+function _buildSectionTimeline() {
+  const wrap = document.getElementById('section-timeline-wrap');
+  const container = document.getElementById('section-timeline');
+  if (!container || !_sections.length || !_audio || !_audio.duration) return;
+  while (container.firstChild) container.removeChild(container.firstChild);
+  const dur = _audio.duration;
+  _sections.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = `section-pill section-pill-${s.type}`;
+    btn.style.flexBasis = `${((s.end_sec - s.start_sec) / dur) * 100}%`;
+    btn.textContent = _SEC_DISPLAY[s.type] || s.type.toUpperCase();
+    btn.title = `${_SEC_DISPLAY[s.type] || s.type} — mesure ${s.bar_start + 1}`;
+    btn.addEventListener('click', () => { if (_audio) { _audio.currentTime = s.start_sec; _updateTime(); _syncTab(); } });
+    container.appendChild(btn);
+  });
+  if (wrap) wrap.style.display = 'block';
+}
 let _initialized = false;
 let _tabBarCache = null;
 let _transposeSteps = 0;
@@ -153,8 +174,9 @@ function _updateTrinity(activeIdx) {
 }
 
 // ── Init ─────────────────────────────────────────────────────
-function initPlayback(audioEl, bars) {
+function initPlayback(audioEl, bars, sections) {
   _lastActiveIdx = -2;
+  _sections = sections || [];
   if (_initialized) {
     _audio = audioEl;
     _bars = bars || [];
@@ -181,9 +203,30 @@ function initPlayback(audioEl, bars) {
   _audio.addEventListener('play',  _onPlay);
   _audio.addEventListener('pause', _onPause);
   _audio.addEventListener('ended', _onPause);
-  _audio.addEventListener('loadedmetadata', _updateTime);
+  _audio.addEventListener('loadedmetadata', () => { _updateTime(); _buildSectionTimeline(); });
 
   playBtn.addEventListener('click', _togglePlay);
+
+  const rewindBtn = document.getElementById('rewind-btn');
+  const back5Btn  = document.getElementById('back5-btn');
+  if (rewindBtn && !rewindBtn._bound) {
+    rewindBtn._bound = true;
+    rewindBtn.addEventListener('click', () => {
+      if (!_audio) return;
+      _audio.currentTime = 0;
+      _updateTime();
+      _syncTab();
+    });
+  }
+  if (back5Btn && !back5Btn._bound) {
+    back5Btn._bound = true;
+    back5Btn.addEventListener('click', () => {
+      if (!_audio) return;
+      _audio.currentTime = Math.max(0, _audio.currentTime - 5);
+      _updateTime();
+      _syncTab();
+    });
+  }
 
   scrubber.addEventListener('click', e => {
     if (!_audio || !_audio.duration) return;

@@ -7,7 +7,7 @@ let currentJobId = null;
 let pollTimer = null;
 let resultsData = null;
 let activeTab = 'guitar1';
-const toggleState = { multi: false, bass: false, vocal: false, drums: false, keys: false };
+const toggleState = { multi: false, bass: false, vocal: false, drums: false, keys: false, nosep: false };
 let pwaInstallPrompt = null;
 let selectedLyricsFile = null;
 
@@ -113,6 +113,7 @@ function _setupToggle(id, key) {
   });
 }
 _setupToggle('multi', 'multi');
+_setupToggle('nosep', 'nosep');
 _setupToggle('bass', 'bass');
 _setupToggle('vocal', 'vocal');
 _setupToggle('drums', 'drums');
@@ -191,6 +192,7 @@ async function _submitJob() {
   formData.append('vocal_tab', toggleState.vocal);
   formData.append('drum_summary', toggleState.drums);
   formData.append('keys_tab', toggleState.keys);
+  formData.append('no_separation', toggleState.nosep);
   if (selectedLyricsFile) {
     formData.append('lyrics_file', selectedLyricsFile);
   } else if (lyricsTextarea.value.trim()) {
@@ -274,7 +276,7 @@ async function _loadResults() {
     const audio = document.getElementById('audio-player');
     audio.src = `${API_BASE_URL}/api/jobs/${currentJobId}/audio`;
     // Init playback
-    if (window.initPlayback) window.initPlayback(audio, resultsData.bars);
+    if (window.initPlayback) window.initPlayback(audio, resultsData.bars, resultsData.sections);
     _showState('results');
     // Reveal right panel on mobile
     panelRight.classList.remove('hidden');
@@ -287,6 +289,14 @@ async function _loadResults() {
 }
 
 function _renderResults(data) {
+  // Song meta (key + BPM)
+  const metaEl = document.getElementById('song-meta');
+  if (metaEl && data.key) {
+    document.getElementById('meta-key').textContent = data.key;
+    document.getElementById('meta-bpm').textContent = data.tempo || '—';
+    metaEl.style.display = 'flex';
+  }
+
   // Build tab switcher
   tabSwitcher.innerHTML = '';
   const tabs = Object.keys(data.tabs);
@@ -298,6 +308,16 @@ function _renderResults(data) {
     btn.addEventListener('click', () => _switchTab(t, tabs));
     tabSwitcher.appendChild(btn);
   });
+  // Add FICHE tab if structure was detected
+  if (data.sections && data.sections.length) {
+    const btn = document.createElement('div');
+    btn.className = 'tab-btn';
+    btn.textContent = 'Fiche';
+    btn.dataset.track = 'fiche';
+    btn.addEventListener('click', () => _switchTab('fiche', tabs));
+    tabSwitcher.appendChild(btn);
+  }
+
   activeTab = tabs[0];
   _renderTab(activeTab, data);
 }
@@ -319,7 +339,105 @@ function _switchTab(track, allTracks) {
   _renderTab(track, resultsData);
 }
 
+const _SECTION_DISPLAY = { intro: 'INTRO', verse: 'COUPLET', chorus: 'REFRAIN', bridge: 'PONT', outro: 'OUTRO' };
+
+function _renderFiche(data) {
+  tabContent.innerHTML = '';
+  tabDownloads.innerHTML = '';
+
+  const sections = data.sections || [];
+  // measures: bar-aligned (one per musical bar); bars: frame-level chord events
+  const measures = data.measures || data.bars || [];
+  const chordEvents = data.bars || [];
+
+  if (!sections.length) {
+    const p = document.createElement('p');
+    p.className = 'tab-comment';
+    p.textContent = '# Structure non détectée pour cette chanson.';
+    tabContent.appendChild(p);
+    return;
+  }
+
+  // Action buttons
+  const btnRow = document.createElement('div');
+  btnRow.className = 'fiche-btn-row';
+
+  const printBtn = document.createElement('button');
+  printBtn.className = 'fiche-print-btn';
+  printBtn.textContent = '↓ Imprimer';
+  printBtn.addEventListener('click', () => window.print());
+  btnRow.appendChild(printBtn);
+
+  const pdfBtn = document.createElement('button');
+  pdfBtn.className = 'fiche-print-btn';
+  pdfBtn.textContent = '↓ Fiche PDF';
+  pdfBtn.addEventListener('click', () => {
+    window.open(`${API_BASE_URL}/api/jobs/${currentJobId}/download/rehearsal/pdf`, '_blank');
+  });
+  btnRow.appendChild(pdfBtn);
+
+  tabContent.appendChild(btnRow);
+
+  // Collect distinct chord labels that fall within a measure's time window.
+  // Uses frame-level chord events to catch mid-bar chord changes (e.g. Em7 / Dmaj7).
+  function _measureChords(measure) {
+    const t0 = measure.start_sec;
+    const t1 = measure.end_sec;
+    const events = chordEvents.filter(e => e.start_sec < t1 - 0.05 && e.end_sec > t0 + 0.05);
+    if (!events.length) return measure.label || 'N.C.';
+    const labels = [];
+    events.forEach(e => {
+      const lbl = e.label || 'N.C.';
+      if (!labels.length || labels[labels.length - 1] !== lbl) labels.push(lbl);
+    });
+    return labels.join(' / ');
+  }
+
+  sections.forEach(section => {
+    const secMeasures = measures.slice(section.bar_start, section.bar_end);
+    if (!secMeasures.length) return;
+
+    const secDiv = document.createElement('div');
+    secDiv.className = 'fiche-section';
+
+    const hdr = document.createElement('div');
+    hdr.className = `fiche-section-header fiche-type-${section.type}`;
+    hdr.textContent = _SECTION_DISPLAY[section.type] || section.type.toUpperCase();
+    secDiv.appendChild(hdr);
+
+    const grid = document.createElement('div');
+    grid.className = 'fiche-grid';
+
+    secMeasures.forEach((measure, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'fiche-measure';
+      const measureNum = section.bar_start + i + 1;
+      cell.title = `Mesure ${measureNum} — cliquer pour jouer`;
+      cell.addEventListener('click', () => {
+        const audio = document.getElementById('audio-player');
+        if (audio) { audio.currentTime = measure.start_sec; }
+      });
+
+      const num = document.createElement('span');
+      num.className = 'fiche-m-num';
+      num.textContent = measureNum;
+
+      const chord = document.createElement('span');
+      chord.className = 'fiche-m-chord';
+      chord.textContent = _measureChords(measure);
+
+      cell.appendChild(num);
+      cell.appendChild(chord);
+      grid.appendChild(cell);
+    });
+
+    secDiv.appendChild(grid);
+    tabContent.appendChild(secDiv);
+  });
+}
+
 function _renderTab(track, data) {
+  if (track === 'fiche') { _renderFiche(data); return; }
   const text = data.tabs[track] || '';
   tabContent.innerHTML = '';
 

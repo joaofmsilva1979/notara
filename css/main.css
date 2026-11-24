@@ -160,7 +160,14 @@ nav { background: var(--white); border-bottom: 1px solid var(--border); padding:
 
 /* PLAYBACK */
 .playback-box { background: var(--white); border-radius: 10px; border: 1px solid var(--border); padding: 14px 16px; }
-.playback-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.song-meta { display: flex; align-items: center; gap: 16px; margin-bottom: 10px; }
+.song-meta-item { display: flex; align-items: baseline; gap: 6px; }
+.song-meta-label { font-size: 9px; font-weight: 700; color: var(--muted); letter-spacing: 0.08em; }
+.song-meta-value { font-size: 14px; font-weight: 700; color: var(--text); }
+.song-meta-sep { width: 1px; height: 16px; background: var(--border); }
+.playback-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.transport-btn { background: var(--cream); border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; font-size: 9px; font-weight: 600; color: var(--text); cursor: pointer; font-family: inherit; transition: background 0.1s, border-color 0.1s; white-space: nowrap; flex-shrink: 0; }
+.transport-btn:hover { border-color: var(--red); color: var(--red); }
 .play-btn { width: 36px; height: 36px; min-width: 36px; background: var(--red); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; box-shadow: 0 2px 8px rgba(183,28,28,0.30); }
 .play-triangle { width:0; height:0; border-style:solid; border-width:7px 0 7px 13px; border-color:transparent transparent transparent var(--white); margin-left:2px; }
 .pause-bars { display:flex; gap:3px; align-items:center; }
@@ -499,4 +506,94 @@ nav { background: var(--white); border-bottom: 1px solid var(--border); padding:
   color: var(--muted);
   margin: 2px 0 0 0;
   line-height: 1.4;
+}
+
+/* ── Section timeline (proportional bar above chord pills) ── */
+.section-timeline-wrap { margin-bottom: 6px; }
+.section-timeline { display: flex; gap: 2px; height: 18px; }
+.section-pill {
+  flex: 0 0 auto;
+  min-width: 0;
+  height: 18px;
+  border: none;
+  border-radius: 3px;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  cursor: pointer;
+  color: #fff;
+  padding: 0 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  transition: opacity 0.1s;
+}
+.section-pill:hover { opacity: 0.8; }
+.section-pill-intro  { background: #888; }
+.section-pill-verse  { background: #2C5F8A; }
+.section-pill-chorus { background: #B71C1C; }
+.section-pill-bridge { background: #2E7D32; }
+.section-pill-outro  { background: #666; }
+
+/* ── Fiche de répétition ─────────────────────────────────── */
+.fiche-print-btn {
+  background: var(--cream); border: 1px solid var(--border); border-radius: 4px;
+  padding: 4px 12px; font-size: 9px; font-weight: 600; color: var(--text);
+  cursor: pointer; font-family: inherit; margin-bottom: 14px; display: block;
+}
+.fiche-print-btn:hover { border-color: var(--red); color: var(--red); }
+.fiche-btn-row { display: flex; gap: 8px; margin-bottom: 14px; }
+.fiche-section { margin-bottom: 10px; }
+.fiche-section-header {
+  padding: 4px 10px; font-size: 8px; font-weight: 700;
+  letter-spacing: 0.1em; color: #fff; border-radius: 3px 3px 0 0;
+}
+.fiche-type-intro  { background: #888; }
+.fiche-type-verse  { background: #2C5F8A; }
+.fiche-type-chorus { background: #B71C1C; }
+.fiche-type-bridge { background: #2E7D32; }
+.fiche-type-outro  { background: #666; }
+.fiche-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border: 1px solid var(--border);
+  border-top: none;
+}
+.fiche-measure {
+  padding: 6px 8px 8px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  position: relative;
+  background: var(--white);
+  transition: background 0.1s;
+}
+.fiche-measure:hover { background: var(--cream); }
+.fiche-measure:nth-child(4n) { border-right: none; }
+.fiche-m-num {
+  display: block;
+  font-size: 7px;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+.fiche-m-chord {
+  display: block;
+  font-size: clamp(9px, 1.5vw, 13px);
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+  word-break: break-word;
+  line-height: 1.2;
+}
+
+/* ── Print ───────────────────────────────────────────────── */
+@media print {
+  body > *:not(#app) { display: none !important; }
+  .panel-left, nav, .section-timeline-wrap, .chord-timeline-wrap,
+  .practice-row, .playback-box, .tab-switcher-row, .tab-downloads,
+  .fiche-print-btn { display: none !important; }
+  #state-results { display: block !important; }
+  #tab-content { display: block !important; overflow: visible !important; }
+  .fiche-section { break-inside: avoid; }
+  .fiche-grid { page-break-inside: avoid; }
 }

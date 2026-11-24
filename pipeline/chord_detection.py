@@ -92,6 +92,10 @@ DIATONIC_BONUS = 0.005
 # own (different) winning label.
 HYSTERESIS_MARGIN = 0.04
 
+# Minimum cosine-similarity score for each half-bar to be considered reliable
+# enough to justify showing a split chord (e.g. "Em7 / D6") in the rehearsal sheet.
+HALF_BAR_SPLIT_MIN_SCORE = 0.40
+
 MAJOR_SCALE_INTERVALS = [0, 2, 4, 5, 7, 9, 11]
 MINOR_SCALE_INTERVALS = [0, 2, 3, 5, 7, 8, 10]  # natural minor
 
@@ -265,6 +269,7 @@ def detect_chords(y: np.ndarray, sr: int, bass_y: Optional[np.ndarray] = None,
 
     bar_results: List[BarResult] = []
     bar_indices: List[int] = []
+    bar_beat_splits: List[Optional[str]] = []  # parallel to bar_results; None = no intra-bar split
     for i in range(len(bar_bounds) - 1):
         start, end = bar_bounds[i], bar_bounds[i + 1]
         if end <= start:
@@ -297,16 +302,64 @@ def detect_chords(y: np.ndarray, sr: int, bass_y: Optional[np.ndarray] = None,
         else:
             label, score = _best_chord(bar_vec, diatonic_roots=diatonic_roots)
 
+        # BarResult always receives a clean single-chord label so _smooth_labels
+        # can call _score_label on it without crashing. Beat-level splits are
+        # computed separately below and applied after smoothing.
         bar_results.append(BarResult(label=label, score=score,
                                       root_forced=forced_root is not None,
                                       chroma=bar_vec))
         bar_indices.append(i)
 
+        # ── Beat-level split (stored separately, applied post-smoothing) ──────
+        # Analyse each beat individually; collapse consecutive identical labels.
+        # Result is None when the bar is uniform (no split needed).
+        split_label: Optional[str] = None
+        bar_beat_start = i * BEATS_PER_BAR
+        bar_beat_times = beat_times[bar_beat_start: bar_beat_start + BEATS_PER_BAR]
+        if len(bar_beat_times) == BEATS_PER_BAR:
+            beat_bounds = list(bar_beat_times) + [end]
+            beat_labels: List[str] = []
+            for b in range(BEATS_PER_BAR):
+                bt0, bt1 = beat_bounds[b], beat_bounds[b + 1]
+                # Evidence vector for this beat
+                bv: Optional[np.ndarray] = None
+                if notes is not None:
+                    bv = _notes_to_pc_weights(notes, bt0, bt1)
+                    if bv.sum() == 0:
+                        bv = None
+                if bv is None:
+                    bmask = (chroma_times >= bt0) & (chroma_times < bt1)
+                    bv = chroma[:, bmask].mean(axis=1) if np.any(bmask) else None
+                if bv is None:
+                    beat_labels.append(label)
+                    continue
+                # Bass root for this beat
+                br: Optional[int] = None
+                if bass_chroma is not None:
+                    bm = (bass_chroma_times >= bt0) & (bass_chroma_times < bt1)
+                    if np.any(bm):
+                        br = _bass_root_pitch_class(bass_chroma[:, bm].mean(axis=1))
+                bl, bs = _best_chord(bv, forced_root=br,
+                                     diatonic_roots=diatonic_roots if br is None else None)
+                beat_labels.append(bl if bs >= HALF_BAR_SPLIT_MIN_SCORE else label)
+
+            # Collapse consecutive identical beat labels
+            collapsed: List[str] = []
+            for bl in beat_labels:
+                if not collapsed or collapsed[-1] != bl:
+                    collapsed.append(bl)
+            if len(collapsed) > 1:
+                split_label = " / ".join(collapsed)
+
+        bar_beat_splits.append(split_label)
+
     smoothed_labels = _smooth_labels(bar_results)
 
     segments: List[ChordSegment] = []
-    for idx, label in zip(bar_indices, smoothed_labels):
+    for j, (idx, smooth_label) in enumerate(zip(bar_indices, smoothed_labels)):
         start, end = bar_bounds[idx], bar_bounds[idx + 1]
-        segments.append(ChordSegment(bar_index=idx, start=start, end=end, label=label))
+        # Apply beat split override when available
+        final_label = bar_beat_splits[j] if bar_beat_splits[j] is not None else smooth_label
+        segments.append(ChordSegment(bar_index=idx, start=start, end=end, label=final_label))
 
     return segments, float(np.asarray(tempo).reshape(-1)[0])

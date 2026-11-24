@@ -185,6 +185,18 @@
           </div>
         </div>
 
+        <!-- Skip separation -->
+        <div class="opt-row">
+          <div>
+            <div class="opt-label">Already isolated track</div>
+            <div class="opt-sublabel">Skip stem separation — use file directly</div>
+          </div>
+          <div class="toggle" id="toggle-nosep">
+            <div class="toggle-yes" data-val="0">No</div>
+            <div class="toggle-no" data-val="1">Yes</div>
+          </div>
+        </div>
+
         <!-- Bass tab -->
         <div class="opt-row">
           <div>
@@ -268,8 +280,17 @@
       <!-- Playback bar -->
       <div class="playback-box">
 
+        <!-- Song meta -->
+        <div class="song-meta" id="song-meta" style="display:none">
+          <span class="song-meta-item"><span class="song-meta-label">KEY</span><span class="song-meta-value" id="meta-key">—</span></span>
+          <span class="song-meta-sep"></span>
+          <span class="song-meta-item"><span class="song-meta-label">BPM</span><span class="song-meta-value" id="meta-bpm">—</span></span>
+        </div>
+
         <!-- Transport row -->
         <div class="playback-row">
+          <button class="transport-btn" id="rewind-btn" title="Retour au début">&#9664; 0</button>
+          <button class="transport-btn" id="back5-btn" title="Reculer 5s">&#8722;5s</button>
           <button class="play-btn" id="play-btn">
             <div class="play-triangle" id="play-icon"></div>
           </button>
@@ -301,6 +322,11 @@
             <div class="slot-name" id="chord-after">—</div>
             <div class="slot-diag" id="diag-after"></div>
           </div>
+        </div>
+
+        <!-- Section structure timeline (proportional) -->
+        <div class="section-timeline-wrap" id="section-timeline-wrap" style="display:none">
+          <div class="section-timeline" id="section-timeline"></div>
         </div>
 
         <!-- Chord timeline (scrollable pills) -->

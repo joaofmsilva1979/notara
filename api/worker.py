@@ -23,10 +23,11 @@ from pipeline import vocal_tab as vocal_tab_mod
 from pipeline import drum_summary as drum_summary_mod
 from pipeline import piano_tab as piano_tab_mod
 from pipeline.midi_export import export_midi
-from pipeline.pdf_export import export_pdf
+from pipeline.pdf_export import export_pdf, export_rehearsal_pdf as _export_rehearsal_pdf
 from pipeline.lyrics_align import align_lyrics as _align_lyrics
 from pipeline.pdf_export import export_lyrics_pdf as _export_lyrics_pdf
 from pipeline.separation import DEMUCS_MODEL
+from pipeline.structure_detection import detect_structure
 
 from . import jobs as job_store
 
@@ -38,10 +39,10 @@ def _step(job: job_store.Job, n: int, label: str) -> None:
 
 
 def _count_steps(params: Dict[str, Any]) -> int:
-    base = 4  # separate + transcribe g1 + key/chords + fretboard/render g1
+    base = 3 if params.get("no_separation") else 4  # 4 = separate + transcribe + key/chords + render
     if params["multi_guitar"]:
         base += 1
-    if params["bass_tab"]:
+    if params["bass_tab"] and not params.get("no_separation"):
         base += 1
     if params["vocal_tab"]:
         base += 1
@@ -87,17 +88,26 @@ def run_job(job_id: str, params: Dict[str, Any]) -> None:
 
         audio_path = Path(params["audio_path"])
 
-        # Step: Separate
-        step += 1
-        _step(job, step, "Separating stems (Demucs)")
-        if params["multi_guitar"]:
-            guitar1_path, guitar2_path, bass_path, harmonic_path = \
-                separation.separate_guitars(audio_path, work_dir)
-            guitar_stem_path = guitar1_path  # best available clean guitar signal
-        else:
-            harmonic_path, bass_path, guitar_stem_path = separation.separate(audio_path, work_dir)
-            guitar1_path = harmonic_path
+        # Step: Separate (skip when input is already an isolated track)
+        if params.get("no_separation"):
+            # Bypass Demucs — use the original file as guitar and harmonic signal.
+            # bass_path set to audio_path: BASS_CLARITY_THRESHOLD prevents false root corrections.
+            harmonic_path = audio_path
+            bass_path = audio_path
+            guitar_stem_path = audio_path
+            guitar1_path = audio_path
             guitar2_path = None
+        else:
+            step += 1
+            _step(job, step, "Separating stems (Demucs)")
+            if params["multi_guitar"]:
+                guitar1_path, guitar2_path, bass_path, harmonic_path = \
+                    separation.separate_guitars(audio_path, work_dir)
+                guitar_stem_path = guitar1_path
+            else:
+                harmonic_path, bass_path, guitar_stem_path = separation.separate(audio_path, work_dir)
+                guitar1_path = harmonic_path
+                guitar2_path = None
 
         # Step: Transcribe Guitar 1
         step += 1
@@ -185,18 +195,45 @@ def run_job(job_id: str, params: Dict[str, Any]) -> None:
         )
         export_midi(work_dir / "guitar1.midi", fretted1, tempo)
 
+        # chord_events: frame-level (fires at actual chord changes) — drives
+        # the frontend NOW/NEXT/AFTER display and chord timeline.
+        bars_dicts = [
+            {"label": b.label, "start_sec": round(b.start, 3), "end_sec": round(b.end, 3)}
+            for b in chord_events
+        ]
+        # measures_dicts: bar-aligned (one entry per musical measure) — used by
+        # the rehearsal fiche grid and section detection indexing.
+        measures_dicts = [
+            {"label": b.label, "start_sec": round(b.start, 3), "end_sec": round(b.end, 3)}
+            for b in bars
+        ]
+
+        # Song structure detection (best-effort — never fails the job)
+        sections_data: list[dict] = []
+        try:
+            sections = detect_structure(y, sr, measures_dicts)
+            sections_data = [
+                {
+                    "label": s.label,
+                    "type": s.type,
+                    "start_sec": s.start_sec,
+                    "end_sec": s.end_sec,
+                    "bar_start": s.bar_start,
+                    "bar_end": s.bar_end,
+                }
+                for s in sections
+            ]
+        except Exception:
+            pass
+
         results: Dict[str, Any] = {
             "tabs": {"guitar1": tab1_web},
             "key": str(key_est),
             "tempo": round(tempo, 1),
             "tuning": guitar_tuning.name,
-            # chord_events: frame-level precision (fires at actual chord changes,
-            # not bar-grid) — drives the frontend NOW/NEXT/AFTER display and timeline.
-            "bars": [
-                {"label": b.label, "start_sec": round(b.start, 3),
-                 "end_sec": round(b.end, 3)}
-                for b in chord_events
-            ],
+            "bars": bars_dicts,
+            "measures": measures_dicts,
+            "sections": sections_data,
         }
 
         # Optional: Guitar 2
@@ -223,8 +260,8 @@ def run_job(job_id: str, params: Dict[str, Any]) -> None:
             export_midi(work_dir / "guitar2.midi", fretted2, tempo)
             results["tabs"]["guitar2"] = tab2_web
 
-        # Optional: Bass tab
-        if params["bass_tab"]:
+        # Optional: Bass tab (skip when no_separation — no bass stem available)
+        if params["bass_tab"] and not params.get("no_separation"):
             step += 1
             _step(job, step, "Transcribing bass")
             bass_tuning = tuning_mod.find_tuning(tuning_mod.BASS_STANDARD_EADG)
@@ -301,6 +338,21 @@ def run_job(job_id: str, params: Dict[str, Any]) -> None:
                 (work_dir / "lyrics.txt").write_text(lyrics_chart, encoding="utf-8")
                 _export_lyrics_pdf(work_dir / "lyrics.pdf", lyrics_chart)
                 results["tabs"]["lyrics"] = lyrics_chart
+
+        # Rehearsal PDF — generated only when sections are available
+        if sections_data:
+            try:
+                _export_rehearsal_pdf(
+                    work_dir / "rehearsal.pdf",
+                    title=audio_path.name,
+                    key_str=str(key_est),
+                    tempo=round(tempo, 1),
+                    tuning_name=guitar_tuning.name,
+                    bars=measures_dicts,
+                    sections=sections_data,
+                )
+            except Exception:
+                pass
 
         job.results = results
         job.status = "done"

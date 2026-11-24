@@ -39,7 +39,7 @@ from .tab_render import render_tab
 from .tuning import Tuning
 
 import re as _re
-from reportlab.lib.colors import HexColor as _HexColor
+from reportlab.lib.colors import HexColor as _HexColor, white as _white, black as _black
 
 _, PAGE_HEIGHT = A4  # only page height is used for pagination math; width is fixed by `pagesize=A4` below
 MARGIN = 36  # points (0.5 inch)
@@ -159,5 +159,183 @@ def export_lyrics_pdf(path: Path, chord_chart: str) -> None:
         pdf.drawString(_LYRICS_MARGIN_PT, y, raw_line)
         y -= line_height
         on_page += 1
+
+    pdf.save()
+
+
+# ── Rehearsal cheat sheet ────────────────────────────────────────────────────
+
+_RS_COLORS = {
+    "intro":  _HexColor("#888888"),
+    "verse":  _HexColor("#2C5F8A"),
+    "chorus": _HexColor("#B71C1C"),
+    "bridge": _HexColor("#2E7D32"),
+    "outro":  _HexColor("#666666"),
+}
+_RS_LABELS = {
+    "intro": "INTRO", "verse": "COUPLET",
+    "chorus": "REFRAIN", "bridge": "PONT", "outro": "OUTRO",
+}
+_RS_MARGIN = 40
+_RS_SEC_H = 20
+_RS_ROW_H = 32        # height of each measure row (more compact than old _RS_CELL_H=44)
+_RS_BARS_PER_ROW = 4
+_RS_REPEAT_W = 28     # width reserved to the right for "×N" markers
+
+
+def export_rehearsal_pdf(
+    path: Path,
+    title: str,
+    key_str: str,
+    tempo: float,
+    tuning_name: str,
+    bars: list,      # list of dicts: {'label', 'start_sec', 'end_sec'}
+    sections: list,  # list of dicts: {'type', 'label', 'bar_start', 'bar_end'}
+) -> None:
+    """Rehearsal cheat sheet — linear chord chart with bar separators and repeat compression.
+
+    Each section renders as horizontal rows: | Chord1  | Chord2  | Chord3  | Chord4  ||
+    Consecutive rows with the same chord pattern are collapsed: one row shown + ×N marker.
+    """
+    PAGE_W, PAGE_H = A4
+    BODY_W = PAGE_W - 2 * _RS_MARGIN - _RS_REPEAT_W
+    CELL_W = BODY_W / _RS_BARS_PER_ROW
+
+    pdf = canvas.Canvas(str(path), pagesize=A4)
+    y = PAGE_H - _RS_MARGIN
+
+    def _new_page() -> float:
+        pdf.showPage()
+        return PAGE_H - _RS_MARGIN
+
+    def _ensure(needed: float) -> None:
+        nonlocal y
+        if y - needed < _RS_MARGIN:
+            y = _new_page()
+
+    # ── Header ──────────────────────────────────────────────────
+    short = title[:55] + "…" if len(title) > 55 else title
+    pdf.setFont("Helvetica-Bold", 13)
+    pdf.setFillColor(_black)
+    pdf.drawString(_RS_MARGIN, y, short)
+    y -= 15
+
+    pdf.setFont("Helvetica", 8)
+    pdf.setFillColor(_HexColor("#666666"))
+    pdf.drawString(_RS_MARGIN, y, f"Clé : {key_str}   ·   {tempo} BPM   ·   {tuning_name}   ·   Notara")
+    y -= 7
+    pdf.setStrokeColor(_HexColor("#CCCCCC"))
+    pdf.line(_RS_MARGIN, y, PAGE_W - _RS_MARGIN, y)
+    y -= 12
+
+    # ── Sections ────────────────────────────────────────────────
+    for section in sections:
+        sec_bars = bars[section["bar_start"]: section["bar_end"]]
+        if not sec_bars:
+            continue
+
+        color   = _RS_COLORS.get(section["type"], _HexColor("#888888"))
+        display = _RS_LABELS.get(section["type"], section["type"].upper())
+
+        # Group bars into rows of _RS_BARS_PER_ROW
+        rows = []
+        for i in range(0, len(sec_bars), _RS_BARS_PER_ROW):
+            chunk = sec_bars[i: i + _RS_BARS_PER_ROW]
+            nums  = [section["bar_start"] + i + j + 1 for j in range(len(chunk))]
+            key   = tuple(b.get("label") or "N.C." for b in chunk)
+            rows.append([key, nums, chunk, 1])   # [chord_key, bar_nums, bars, repeat_count]
+
+        # Collapse consecutive identical rows
+        collapsed: list = []
+        for row in rows:
+            if collapsed and collapsed[-1][0] == row[0]:
+                collapsed[-1][3] += 1
+            else:
+                collapsed.append(row)
+
+        # Section header
+        _ensure(_RS_SEC_H + _RS_ROW_H)
+        pdf.setFillColor(color)
+        pdf.rect(_RS_MARGIN, y - _RS_SEC_H, PAGE_W - 2 * _RS_MARGIN, _RS_SEC_H, fill=1, stroke=0)
+        pdf.setFillColor(_white)
+        pdf.setFont("Helvetica-Bold", 8)
+        pdf.drawString(_RS_MARGIN + 6, y - _RS_SEC_H + 6, display)
+        lbl = f"({section['label']})"
+        lbl_w = pdf.stringWidth(lbl, "Helvetica-Bold", 8)
+        pdf.drawString(PAGE_W - _RS_MARGIN - lbl_w - 6, y - _RS_SEC_H + 6, lbl)
+        y -= _RS_SEC_H
+
+        # Draw rows — chord chart style: no cell fills, vertical bar lines only
+        BAR_LINE_H = _RS_ROW_H - 4   # bar lines don't touch the horizontal row lines
+        BAR_LINE_Y_TOP = 0            # will be computed per row
+
+        for row_idx, (chord_key, bar_nums, chunk, repeat_count) in enumerate(collapsed):
+            _ensure(_RS_ROW_H + 2)
+
+            row_y = y  # top of this row
+            mid_y  = row_y - _RS_ROW_H / 2
+
+            # Thin horizontal lines — top and bottom of row (staff-line feel)
+            pdf.setStrokeColor(_HexColor("#CCCCCC"))
+            pdf.setLineWidth(0.4)
+            pdf.line(_RS_MARGIN, row_y,              _RS_MARGIN + BODY_W, row_y)
+            pdf.line(_RS_MARGIN, row_y - _RS_ROW_H, _RS_MARGIN + BODY_W, row_y - _RS_ROW_H)
+
+            # Vertical bar lines (musical bar lines)
+            bar_top = row_y - 2
+            bar_bot = row_y - _RS_ROW_H + 2
+
+            # Opening double bar ||
+            pdf.setStrokeColor(_HexColor("#444444"))
+            pdf.setLineWidth(0.5)
+            pdf.line(_RS_MARGIN,     bar_top, _RS_MARGIN,     bar_bot)
+            pdf.setLineWidth(1.5)
+            pdf.line(_RS_MARGIN + 3, bar_top, _RS_MARGIN + 3, bar_bot)
+
+            # Single bars between measures
+            for col in range(1, len(chunk)):
+                x_bar = _RS_MARGIN + col * CELL_W
+                pdf.setLineWidth(0.5)
+                pdf.setStrokeColor(_HexColor("#888888"))
+                pdf.line(x_bar, bar_top, x_bar, bar_bot)
+
+            # Closing double bar ||
+            x_end = _RS_MARGIN + BODY_W
+            pdf.setStrokeColor(_HexColor("#444444"))
+            pdf.setLineWidth(0.5)
+            pdf.line(x_end - 3, bar_top, x_end - 3, bar_bot)
+            pdf.setLineWidth(1.5)
+            pdf.line(x_end,     bar_top, x_end,     bar_bot)
+
+            # Measure numbers + chord names
+            for col, bar in enumerate(chunk):
+                x = _RS_MARGIN + col * CELL_W
+
+                # Measure number — tiny, top-left
+                pdf.setFillColor(_HexColor("#BBBBBB"))
+                pdf.setFont("Helvetica", 6)
+                pdf.drawString(x + 6, row_y - 8, str(bar_nums[col]))
+
+                # Chord name — vertically centred, horizontally centred in cell
+                chord = bar.get("label") or "N.C."
+                fs = 12 if len(chord) <= 5 else (10 if len(chord) <= 8 else (8 if len(chord) <= 13 else 7))
+                pdf.setFillColor(_black)
+                pdf.setFont("Helvetica-Bold", fs)
+                cw = pdf.stringWidth(chord, "Helvetica-Bold", fs)
+                if cw > CELL_W - 8:
+                    fs = max(6, fs - 1)
+                    pdf.setFont("Helvetica-Bold", fs)
+                    cw = pdf.stringWidth(chord, "Helvetica-Bold", fs)
+                pdf.drawString(x + (CELL_W - cw) / 2, mid_y - fs / 3, chord)
+
+            # Repeat marker — ×N in red, right of closing bar
+            if repeat_count > 1:
+                pdf.setFillColor(_HexColor("#B71C1C"))
+                pdf.setFont("Helvetica-Bold", 9)
+                pdf.drawString(_RS_MARGIN + BODY_W + 6, mid_y - 3, f"×{repeat_count}")
+
+            y -= _RS_ROW_H
+
+        y -= 10  # gap after section
 
     pdf.save()

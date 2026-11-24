@@ -72,6 +72,7 @@ async def create_job(
     vocal_tab: bool = Form(False),
     drum_summary: bool = Form(False),
     keys_tab: bool = Form(False),
+    no_separation: bool = Form(False),
     lyrics_file: Optional[UploadFile] = File(None),
     lyrics_text: Optional[str] = Form(""),
 ):
@@ -107,6 +108,7 @@ async def create_job(
         "vocal_tab": vocal_tab,
         "drum_summary": drum_summary,
         "keys_tab": keys_tab,
+        "no_separation": no_separation,
     }
 
     # Resolve lyrics: file takes priority over pasted text
@@ -181,8 +183,13 @@ async def download_file(job_id: str, track: str, fmt: str):
         raise HTTPException(404, "Job not found")
     if job.status != "done":
         raise HTTPException(409, "Job not done yet")
-    allowed_tracks = {"guitar1", "guitar2", "bass", "vocals", "keys", "drums", "lyrics"}
+    allowed_tracks = {"guitar1", "guitar2", "bass", "vocals", "keys", "drums", "lyrics", "rehearsal"}
     allowed_fmts = {"pdf", "txt", "midi"}
+    if track == "rehearsal" and fmt == "pdf":
+        file_path = job.work_dir / "rehearsal.pdf"
+        if not file_path.exists():
+            raise HTTPException(404, "Rehearsal PDF not available — retranscribe to generate it")
+        return FileResponse(str(file_path), filename="rehearsal.pdf")
     if track not in allowed_tracks or fmt not in allowed_fmts:
         raise HTTPException(400, "Invalid track or format")
     if track == "drums" and fmt not in {"txt"}:
