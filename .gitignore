@@ -6,3 +6,12 @@ __pycache__/
 .env
 .env.*
 *.env
+
+# Docs de pilotage privés (strat, décisions) — jamais sur GitHub public
+_PILOTAGE/
+requirements.lock.txt
+
+# Outillage local (Claude Code, Spec Kit, macOS)
+.claude/
+.specify/
+.DS_Store
